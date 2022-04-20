@@ -1,6 +1,5 @@
 package main
 
-
 import (
 	"encoding/json"
 	"fmt"
@@ -87,7 +86,7 @@ func sendPOST(urlAction string, urlMetricType string, urlMetricKey string, urlMe
 	//	return
 	//}
 	//fmt.Println(string(body))
-	return
+	//return
 }
 func main() {
 	var metricG MetricGauge
@@ -120,4 +119,3 @@ func main() {
 	}
 
 }
-
