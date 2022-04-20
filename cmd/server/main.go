@@ -17,7 +17,11 @@ func receiveGauge(w http.ResponseWriter, r *http.Request) {
 	parsedUrl := strings.Split(url, "/")
 	receivedMetric.ID = parsedUrl[4]
 	receivedMetric.ID = parsedUrl[3]
+
 	receivedMetric.Value, _ = strconv.ParseFloat(parsedUrl[4], 64)
+	if receivedMetric.ID == " " {
+		w.WriteHeader(404)
+	}
 
 	fmt.Printf("%+v\n", receivedMetric)
 	GaugeMemory[receivedMetric.ID] = receivedMetric.Value
