@@ -32,16 +32,16 @@ func receiveCounter(w http.ResponseWriter, r *http.Request) {
 	//s := "/update/gauge/alloc/12"
 	url := r.URL.Path
 	var receivedMetric MetricsCounter
-	parsedUrl := strings.Split(url, "/")
-	receivedMetric.ID = parsedUrl[4]
-	receivedMetric.ID = parsedUrl[3]
+	parsedUrlCounter := strings.Split(url, "/")
+	receivedMetric.ID = parsedUrlCounter[4]
+	receivedMetric.ID = parsedUrlCounter[3]
 
-	receivedMetric.Value, _ = strconv.ParseInt(parsedUrl[4], 0, 64)
-	_, err := strconv.ParseInt(parsedUrl[4], 0, 64)
+	receivedMetric.Value, _ = strconv.ParseInt(parsedUrlCounter[4], 0, 64)
+	_, err := strconv.ParseInt(parsedUrlCounter[4], 0, 64)
 	if err != nil {
 		fmt.Println("ËRROR IS", err)
 	}
-	fmt.Println("Parsed URL is:", parsedUrl)
+	fmt.Println("Parsed URL is:", parsedUrlCounter)
 	fmt.Printf("%+v\n", receivedMetric)
 	previousValue := CounterMemory[receivedMetric.ID]
 	fmt.Println("Previous was ", previousValue)
