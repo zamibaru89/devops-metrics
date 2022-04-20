@@ -4,43 +4,93 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
+	"strconv"
 	"syscall"
 	"time"
 )
 
-var list = []string{"Alloc", "BuckHashSys", "Frees", "GCCPUFraction", "GCSys", "HeapAlloc", "HeapIdle", "HeapInuse", "HeapObjects", "HeapReleased", "HeapSys", "LastGC", "Lookups", "MCacheInuse", "MCacheSys", "MSpanInuse", "MSpanSys", "Mallocs", "NextGC", "NumForcedGC", "NumGC", "OtherSys", "PauseTotalNs", "StackInuse", "StackSys", "Sys", "TotalAlloc", "PollCount", "RandomValue"}
+var listGauges = []string{"Alloc", "BuckHashSys", "Frees", "GCCPUFraction", "GCSys", "HeapAlloc", "HeapIdle", "HeapInuse", "HeapObjects", "HeapReleased", "HeapSys", "LastGC", "Lookups", "MCacheInuse", "MCacheSys", "MSpanInuse", "MSpanSys", "Mallocs", "NextGC", "NumForcedGC", "NumGC", "OtherSys", "PauseTotalNs", "StackInuse", "StackSys", "Sys", "TotalAlloc", "RandomValue"}
+var listCounters = []string{"PollCount"}
 
-type Metric struct {
+var serverToSendAddress string = "127.0.0.1:8080"
+
+type MetricCounter struct {
+	PollCount uint64
+}
+
+type MetricGauge struct {
 	runtime.MemStats
-	PollCount   uint64
-	RandomValue uint64
+	RandomValue float64
 }
 
-func (m *Metric) UpdateMetrics() {
+func (m *MetricGauge) UpdateMetrics() {
 	runtime.ReadMemStats(&m.MemStats)
-	m.PollCount++
-	m.RandomValue = uint64(rand.Intn(1000))
+	m.RandomValue = rand.Float64()
 }
 
-func (m *Metric) SendMetrics() {
-	x := make(map[string]float64)
+func (m *MetricGauge) SendMetrics() {
+	x := make(map[string]interface{})
 	j, _ := json.Marshal(m)
 	json.Unmarshal(j, &x)
 
-	for _, v := range list {
+	for _, v := range listGauges {
 		value := x[v]
-		fmt.Println("key: ", v, "value: ", value)
-
+		//fmt.Println("key: ", v, "value: ", value)
+		sendPOST("update", "gauge", v, fmt.Sprintf("%f", value))
 	}
 
 }
 
-func main() {
-	var metric Metric
+func (m *MetricCounter) UpdateMetrics() {
+	m.PollCount++
+}
 
+func (m *MetricCounter) SendMetrics() {
+	xc := make(map[string]int64)
+	j, _ := json.Marshal(m)
+	json.Unmarshal(j, &xc)
+
+	for _, v := range listCounters {
+		value := xc[v]
+		//fmt.Println("key: ", v, "value: ", strconv.FormatInt(value, 10))
+		sendPOST("update", "counter", v, strconv.FormatInt(value, 10))
+	}
+
+}
+
+func sendPOST(urlAction string, urlMetricType string, urlMetricKey string, urlMetricValue string) {
+	//http://<АДРЕС_СЕРВЕРА>/update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>
+	url := "http://" + serverToSendAddress + "/" + urlAction + "/"
+	url += urlMetricType + "/" + urlMetricKey + "/" + urlMetricValue
+	method := "POST"
+	client := &http.Client{}
+	req, err := http.NewRequest(method, url, nil)
+	req.Header.Add("Content-Type", "Content-Type: text/plain")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	res, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer res.Body.Close()
+	//body, err := ioutil.ReadAll(res.Body)
+	//if err != nil {
+	//	fmt.Println(err)
+	//	return
+	//}
+	//fmt.Println(string(body))
+	return
+}
+func main() {
+	var metricG MetricGauge
+	var metricC MetricCounter
 	pullTicker := time.NewTicker(2 * time.Second)
 	pushTicker := time.NewTicker(10 * time.Second)
 
@@ -50,12 +100,13 @@ func main() {
 	for {
 		select {
 		case <-pullTicker.C:
-			metric.UpdateMetrics()
+			metricG.UpdateMetrics()
+			metricC.UpdateMetrics()
 			fmt.Println("running metric.UpdateMetrics()")
 
 		case <-pushTicker.C:
-			metric.SendMetrics()
-
+			metricG.SendMetrics()
+			metricC.SendMetrics()
 		case <-sigs:
 			fmt.Println("signal received")
 			pullTicker.Stop()
