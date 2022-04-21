@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"github.com/go-chi/chi/v5"
-	_ "github.com/go-chi/chi/v5"
 	"net/http"
 	"strconv"
 )
@@ -15,11 +14,14 @@ func receiveGauge(w http.ResponseWriter, r *http.Request) {
 	//s := "/update/gauge/alloc/12"
 	//r.Get("/update/gauge/{metricName}/{metricValue}", receiveGauge)
 	var receivedMetric MetricsGauge
+	var err error
 	metricName := chi.URLParam(r, "metricName")
 	metricValue := chi.URLParam(r, "metricValue")
 	receivedMetric.ID = metricName
-	receivedMetric.Value, _ = strconv.ParseFloat(metricValue, 64)
-
+	receivedMetric.Value, err = strconv.ParseFloat(metricValue, 64)
+	if err != nil {
+		w.WriteHeader(404)
+	}
 	fmt.Printf("%+v\n", receivedMetric)
 	GaugeMemory[receivedMetric.ID] = receivedMetric.Value
 
@@ -35,8 +37,11 @@ func receiveCounter(w http.ResponseWriter, r *http.Request) {
 	metricName := chi.URLParam(r, "metricName")
 	metricValue := chi.URLParam(r, "metricValue")
 	receivedMetric.ID = metricName
-
-	receivedMetric.Value, _ = strconv.ParseInt(metricValue, 0, 64)
+	var err error
+	receivedMetric.Value, err = strconv.ParseInt(metricValue, 0, 64)
+	if err != nil {
+		w.WriteHeader(404)
+	}
 	previousValue := CounterMemory[receivedMetric.ID]
 	CounterMemory[receivedMetric.ID] = receivedMetric.Value + previousValue
 
@@ -99,7 +104,9 @@ func main() {
 		r.Post("/{operation}/", func(w http.ResponseWriter, r *http.Request) {
 			operation := chi.URLParam(r, "operation")
 			//fmt.Println(operation)
-			if operation != "update" || operation != "value" {
+			if operation != "update" {
+				w.WriteHeader(404)
+			} else if operation != "value" {
 				w.WriteHeader(404)
 			}
 
@@ -107,7 +114,9 @@ func main() {
 		r.Post("/update/{metricType}/", func(w http.ResponseWriter, r *http.Request) {
 			metricType := chi.URLParam(r, "metricType")
 			//fmt.Println(metricType)
-			if "gauge" != metricType || metricType != "counter" {
+			if "gauge" != metricType {
+				w.WriteHeader(404)
+			} else if metricType != "counter" {
 				w.WriteHeader(404)
 			}
 		})
