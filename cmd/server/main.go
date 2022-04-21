@@ -111,7 +111,7 @@ func main() {
 			}
 
 		})
-		r.Get("/update/{metricType}/*", func(w http.ResponseWriter, r *http.Request) {
+		r.Post("/update/{metricType}/*", func(w http.ResponseWriter, r *http.Request) {
 			metricType := chi.URLParam(r, "metricType")
 
 			fmt.Println(metricType)
@@ -121,7 +121,7 @@ func main() {
 				w.WriteHeader(501)
 			}
 		})
-		r.Get("/update/gauge/{metricName}/{metricValue}", receiveGauge)
+		r.Post("/update/gauge/{metricName}/{metricValue}", receiveGauge)
 		r.Post("/update/counter/{metricName}/{metricValue}", receiveCounter)
 		r.Get("/value/gauge/{metricName}", valueOfGaugeMetric)
 		r.Get("/value/counter/{metricName}", valueOfCounterMetric)
