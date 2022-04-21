@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
+	"github.com/go-chi/chi/v5"
+	_ "github.com/go-chi/chi/v5"
 	"net/http"
 	"strconv"
-	"strings"
 )
 
 var GaugeMemory map[string]float64
@@ -12,16 +13,12 @@ var CounterMemory map[string]int64
 
 func receiveGauge(w http.ResponseWriter, r *http.Request) {
 	//s := "/update/gauge/alloc/12"
-	url := r.URL.Path
+	//r.Get("/update/gauge/{metricName}/{metricValue}", receiveGauge)
 	var receivedMetric MetricsGauge
-	parsedUrl := strings.Split(url, "/")
-	receivedMetric.ID = parsedUrl[4]
-	receivedMetric.ID = parsedUrl[3]
-
-	receivedMetric.Value, _ = strconv.ParseFloat(parsedUrl[4], 64)
-	if receivedMetric.ID == " " {
-		w.WriteHeader(404)
-	}
+	metricName := chi.URLParam(r, "metricName")
+	metricValue := chi.URLParam(r, "metricValue")
+	receivedMetric.ID = metricName
+	receivedMetric.Value, _ = strconv.ParseFloat(metricValue, 64)
 
 	fmt.Printf("%+v\n", receivedMetric)
 	GaugeMemory[receivedMetric.ID] = receivedMetric.Value
@@ -33,26 +30,39 @@ func receiveGauge(w http.ResponseWriter, r *http.Request) {
 }
 
 func receiveCounter(w http.ResponseWriter, r *http.Request) {
-	//s := "/update/gauge/alloc/12"
-	url := r.URL.Path
-	var receivedMetric MetricsCounter
-	parsedUrlCounter := strings.Split(url, "/")
-	receivedMetric.ID = parsedUrlCounter[4]
-	receivedMetric.ID = parsedUrlCounter[3]
 
-	receivedMetric.Value, _ = strconv.ParseInt(parsedUrlCounter[4], 0, 64)
-	_, err := strconv.ParseInt(parsedUrlCounter[4], 0, 64)
-	if err != nil {
-		fmt.Println("ËRROR IS", err)
-	}
-	fmt.Println("Parsed URL is:", parsedUrlCounter)
-	fmt.Printf("%+v\n", receivedMetric)
+	var receivedMetric MetricsCounter
+	metricName := chi.URLParam(r, "metricName")
+	metricValue := chi.URLParam(r, "metricValue")
+	receivedMetric.ID = metricName
+
+	receivedMetric.Value, _ = strconv.ParseInt(metricValue, 0, 64)
 	previousValue := CounterMemory[receivedMetric.ID]
-	fmt.Println("Previous was ", previousValue)
 	CounterMemory[receivedMetric.ID] = receivedMetric.Value + previousValue
 
 	for _, value := range CounterMemory {
 		fmt.Println(value)
+	}
+
+}
+func valueOfGaugeMetric(w http.ResponseWriter, r *http.Request) {
+	metricName := chi.URLParam(r, "metricName")
+
+	if value, ok := GaugeMemory[metricName]; ok {
+		fmt.Fprintln(w, value)
+	} else {
+		w.WriteHeader(http.StatusNotFound)
+	}
+
+}
+
+func valueOfCounterMetric(w http.ResponseWriter, r *http.Request) {
+	metricName := chi.URLParam(r, "metricName")
+
+	if value, ok := CounterMemory[metricName]; ok {
+		fmt.Fprintln(w, value)
+	} else {
+		w.WriteHeader(http.StatusNotFound)
 	}
 
 }
@@ -83,17 +93,34 @@ type MetricsCounter struct {
 func main() {
 	GaugeMemory = make(map[string]float64)
 	CounterMemory = make(map[string]int64)
-	http.HandleFunc("/update/gauge/", receiveGauge)
-	http.HandleFunc("/update/counter/", receiveCounter)
-	http.HandleFunc("/metrics/", listMetrics)
-	http.ListenAndServe(":8080", nil)
+	r := chi.NewRouter()
+	r.Route("/", func(r chi.Router) {
+		r.Get("/", listMetrics)
+		r.Post("/{operation}/", func(w http.ResponseWriter, r *http.Request) {
+			operation := chi.URLParam(r, "operation")
+			//fmt.Println(operation)
+			if operation != "update" || operation != "value" {
+				w.WriteHeader(404)
+			}
+
+		})
+		r.Post("/update/{metricType}/", func(w http.ResponseWriter, r *http.Request) {
+			metricType := chi.URLParam(r, "metricType")
+			//fmt.Println(metricType)
+			if "gauge" != metricType || metricType != "counter" {
+				w.WriteHeader(404)
+			}
+		})
+		r.Post("/update/gauge/{metricName}/{metricValue}", receiveGauge)
+		r.Post("/update/counter/{metricName}/{metricValue}", receiveCounter)
+		r.Get("/value/gauge/{metricName}", valueOfGaugeMetric)
+		r.Get("/value/counter/{metricName}", valueOfCounterMetric)
+	})
+
+	http.ListenAndServe(":8080", r)
 }
 
-//Сервер должен собирать и хранить произвольные метрики двух типов:
-//gauge, тип float64, новое значение должно замещать предыдущее;
-//counter, тип int64, новое значение должно добавляться к предыдущему (если оно ранее уже было известно серверу).
-//Метрики должны приниматься сервером по протоколу HTTP, методом POST:
-//по умолчанию открывать порт 8080 на адресе 127.0.0.1;
-//в формате http://<АДРЕС_СЕРВЕРА>/update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>;
-//Content-Type: text/plain;
-//при успешном приёме возвращать статус: http.StatusOK.
+//Сервер должен возвращать текущее значение запрашиваемой метрики в текстовом виде по запросу
+//GET http://<АДРЕС_СЕРВЕРА>/value/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ> (со статусом http.StatusOK).
+//При попытке запроса неизвестной серверу метрики сервер должен возвращать http.StatusNotFound.
+//По запросу GET http://<АДРЕС_СЕРВЕРА>/ сервер должен отдавать HTML-страничку со списком имён и значений всех известных ему на текущий момент метрик.
