@@ -80,13 +80,7 @@ func sendPOST(urlAction string, urlMetricType string, urlMetricKey string, urlMe
 		return
 	}
 	defer res.Body.Close()
-	//body, err := ioutil.ReadAll(res.Body)
-	//if err != nil {
-	//	fmt.Println(err)
-	//	return
-	//}
-	//fmt.Println(string(body))
-	//return
+
 }
 func main() {
 	var metricG MetricGauge
