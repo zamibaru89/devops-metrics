@@ -115,9 +115,9 @@ func main() {
 			metricType := chi.URLParam(r, "metricType")
 			//fmt.Println(metricType)
 			if metricType != "gauge" {
-				w.WriteHeader(404)
+				w.WriteHeader(501)
 			} else if metricType != "counter" {
-				w.WriteHeader(404)
+				w.WriteHeader(501)
 			}
 		})
 		r.Post("/update/gauge/{metricName}/{metricValue}", receiveGauge)
