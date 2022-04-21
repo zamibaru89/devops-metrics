@@ -20,7 +20,7 @@ func receiveGauge(w http.ResponseWriter, r *http.Request) {
 	receivedMetric.ID = metricName
 	receivedMetric.Value, err = strconv.ParseFloat(metricValue, 64)
 	if err != nil {
-		w.WriteHeader(404)
+		w.WriteHeader(http.StatusBadRequest)
 	}
 	fmt.Printf("%+v\n", receivedMetric)
 	GaugeMemory[receivedMetric.ID] = receivedMetric.Value
@@ -40,7 +40,7 @@ func receiveCounter(w http.ResponseWriter, r *http.Request) {
 	var err error
 	receivedMetric.Value, err = strconv.ParseInt(metricValue, 0, 64)
 	if err != nil {
-		w.WriteHeader(404)
+		w.WriteHeader(http.StatusBadRequest)
 	}
 	previousValue := CounterMemory[receivedMetric.ID]
 	CounterMemory[receivedMetric.ID] = receivedMetric.Value + previousValue
@@ -114,7 +114,7 @@ func main() {
 		r.Post("/update/{metricType}/", func(w http.ResponseWriter, r *http.Request) {
 			metricType := chi.URLParam(r, "metricType")
 			//fmt.Println(metricType)
-			if "gauge" != metricType {
+			if metricType != "gauge" {
 				w.WriteHeader(404)
 			} else if metricType != "counter" {
 				w.WriteHeader(404)
