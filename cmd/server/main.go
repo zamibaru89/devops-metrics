@@ -109,7 +109,7 @@ func main() {
 
 		})
 		r.Post("/update/{metricType}/{metricName}/{metricValue}", receiveMetric)
-		r.Get("/value/metricType/{metricName}", valueOfMetric)
+		r.Get("/value/{metricType}/{metricName}", valueOfMetric)
 	})
 
 	http.ListenAndServe(":8080", r)
