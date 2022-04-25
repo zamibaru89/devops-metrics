@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
+	"path"
 	"runtime"
 	"strconv"
 	"syscall"
@@ -17,6 +19,11 @@ var listGauges = []string{"Alloc", "BuckHashSys", "Frees", "GCCPUFraction", "GCS
 var listCounters = []string{"PollCount"}
 
 var serverToSendAddress string = "127.0.0.1:8080"
+
+var u = &url.URL{
+	Scheme: "http",
+	Host:   "localhost:8080",
+}
 
 type MetricCounter struct {
 	PollCount uint64
@@ -39,8 +46,9 @@ func (m *MetricGauge) SendMetrics() {
 
 	for _, v := range listGauges {
 		value := x[v]
-		//fmt.Println("key: ", v, "value: ", value)
-		sendPOST("update", "gauge", v, fmt.Sprintf("%f", value))
+
+		u.Path = path.Join("update", "gauge", v, fmt.Sprintf("%f", value))
+		sendPOST(*u)
 	}
 
 }
@@ -56,19 +64,18 @@ func (m *MetricCounter) SendMetrics() {
 
 	for _, v := range listCounters {
 		value := xc[v]
-		//fmt.Println("key: ", v, "value: ", strconv.FormatInt(value, 10))
-		sendPOST("update", "counter", v, strconv.FormatInt(value, 10))
+
+		u.Path = path.Join("update", "counter", v, strconv.FormatInt(value, 10))
+		sendPOST(*u)
 	}
 
 }
 
-func sendPOST(urlAction string, urlMetricType string, urlMetricKey string, urlMetricValue string) {
-	//http://<АДРЕС_СЕРВЕРА>/update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>
-	url := "http://" + serverToSendAddress + "/" + urlAction + "/"
-	url += urlMetricType + "/" + urlMetricKey + "/" + urlMetricValue
+func sendPOST(u url.URL) {
 	method := "POST"
 	client := &http.Client{}
-	req, err := http.NewRequest(method, url, nil)
+
+	req, err := http.NewRequest(method, u.String(), nil)
 	req.Header.Add("Content-Type", "Content-Type: text/plain")
 	if err != nil {
 		fmt.Println(err)
@@ -86,6 +93,7 @@ func sendPOST(urlAction string, urlMetricType string, urlMetricKey string, urlMe
 func main() {
 	var metricG MetricGauge
 	var metricC MetricCounter
+
 	pullTicker := time.NewTicker(2 * time.Second)
 	pushTicker := time.NewTicker(10 * time.Second)
 

@@ -5,10 +5,23 @@ import (
 	"github.com/go-chi/chi/v5"
 	"net/http"
 	"strconv"
+	"sync"
 )
 
-var GaugeMemory map[string]float64
-var CounterMemory map[string]int64
+type GaugeMemory struct {
+	metric map[string]float64
+	mutex  sync.Mutex
+}
+
+type CounterMemory struct {
+	metric map[string]int64
+	mutex  sync.Mutex
+}
+
+var (
+	GaugeMetric   GaugeMemory
+	CounterMetric CounterMemory
+)
 
 func receiveMetric(w http.ResponseWriter, r *http.Request) {
 	metricType := chi.URLParam(r, "metricType")
@@ -24,7 +37,9 @@ func receiveMetric(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		GaugeMemory[receivedMetric.ID] = receivedMetric.Value
+		GaugeMetric.mutex.Lock()
+		GaugeMetric.metric[receivedMetric.ID] = receivedMetric.Value
+		GaugeMetric.mutex.Unlock()
 
 	} else if metricType == "counter" {
 		var receivedMetric MetricsCounter
@@ -33,9 +48,12 @@ func receiveMetric(w http.ResponseWriter, r *http.Request) {
 		receivedMetric.Value, err = strconv.ParseInt(metricValue, 0, 64)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
+			return
 		}
-		previousValue := CounterMemory[receivedMetric.ID]
-		CounterMemory[receivedMetric.ID] = receivedMetric.Value + previousValue
+		previousValue := CounterMetric.metric[receivedMetric.ID]
+		CounterMetric.mutex.Lock()
+		CounterMetric.metric[receivedMetric.ID] = receivedMetric.Value + previousValue
+		CounterMetric.mutex.Unlock()
 
 	} else {
 		w.WriteHeader(501)
@@ -47,13 +65,13 @@ func valueOfMetric(w http.ResponseWriter, r *http.Request) {
 	metricType := chi.URLParam(r, "metricType")
 	metricName := chi.URLParam(r, "metricName")
 	if metricType == "counter" {
-		if value, ok := CounterMemory[metricName]; ok {
+		if value, ok := CounterMetric.metric[metricName]; ok {
 			fmt.Fprintln(w, value)
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 		}
 	} else if metricType == "gauge" {
-		if value, ok := GaugeMemory[metricName]; ok {
+		if value, ok := GaugeMetric.metric[metricName]; ok {
 			fmt.Fprintln(w, value)
 		} else {
 			w.WriteHeader(http.StatusNotFound)
@@ -66,12 +84,12 @@ func valueOfMetric(w http.ResponseWriter, r *http.Request) {
 func listMetrics(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Fprintln(w, "#########GAUGE METRICS#########")
-	for key, value := range GaugeMemory {
+	for key, value := range GaugeMetric.metric {
 		fmt.Fprintln(w, key, value)
 
 	}
 	fmt.Fprintln(w, "#########COUNTER METRICS#########")
-	for key, value := range CounterMemory {
+	for key, value := range CounterMetric.metric {
 		fmt.Fprintln(w, key, value)
 
 	}
@@ -88,14 +106,16 @@ type MetricsCounter struct {
 }
 
 func main() {
-	GaugeMemory = make(map[string]float64)
-	CounterMemory = make(map[string]int64)
+
+	GaugeMetric.metric = make(map[string]float64)
+	CounterMetric.metric = make(map[string]int64)
+
 	r := chi.NewRouter()
 	r.Route("/", func(r chi.Router) {
 		r.Get("/", listMetrics)
 		r.Post("/{operation}/", func(w http.ResponseWriter, r *http.Request) {
 			operation := chi.URLParam(r, "operation")
-			//fmt.Println(operation)
+
 			if operation != "update" {
 				w.WriteHeader(404)
 			} else if operation != "value" {
@@ -104,7 +124,6 @@ func main() {
 
 		})
 		r.Post("/update/{metricType}/*", func(w http.ResponseWriter, r *http.Request) {
-			fmt.Println()
 			w.WriteHeader(404)
 
 		})
@@ -114,8 +133,3 @@ func main() {
 
 	http.ListenAndServe(":8080", r)
 }
-
-//Сервер должен возвращать текущее значение запрашиваемой метрики в текстовом виде по запросу
-//GET http://<АДРЕС_СЕРВЕРА>/value/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ> (со статусом http.StatusOK).
-//При попытке запроса неизвестной серверу метрики сервер должен возвращать http.StatusNotFound.
-//По запросу GET http://<АДРЕС_СЕРВЕРА>/ сервер должен отдавать HTML-страничку со списком имён и значений всех известных ему на текущий момент метрик.
