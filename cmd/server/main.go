@@ -10,66 +10,58 @@ import (
 var GaugeMemory map[string]float64
 var CounterMemory map[string]int64
 
-func receiveGauge(w http.ResponseWriter, r *http.Request) {
-	//s := "/update/gauge/alloc/12"
-	//r.Get("/update/gauge/{metricName}/{metricValue}", receiveGauge)
-	var receivedMetric MetricsGauge
-	var err error
+func receiveMetric(w http.ResponseWriter, r *http.Request) {
+	metricType := chi.URLParam(r, "metricType")
 	metricName := chi.URLParam(r, "metricName")
 	metricValue := chi.URLParam(r, "metricValue")
-	receivedMetric.ID = metricName
-	receivedMetric.Value, err = strconv.ParseFloat(metricValue, 64)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-	}
-	fmt.Printf("%+v\n", receivedMetric)
-	GaugeMemory[receivedMetric.ID] = receivedMetric.Value
 
-	for _, value := range GaugeMemory {
-		fmt.Println(value)
-	}
+	if metricType == "gauge" {
+		var receivedMetric MetricsGauge
+		var err error
+		receivedMetric.ID = metricName
+		receivedMetric.Value, err = strconv.ParseFloat(metricValue, 64)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		GaugeMemory[receivedMetric.ID] = receivedMetric.Value
 
-}
+	} else if metricType == "counter" {
+		var receivedMetric MetricsCounter
+		receivedMetric.ID = metricName
+		var err error
+		receivedMetric.Value, err = strconv.ParseInt(metricValue, 0, 64)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+		}
+		previousValue := CounterMemory[receivedMetric.ID]
+		CounterMemory[receivedMetric.ID] = receivedMetric.Value + previousValue
 
-func receiveCounter(w http.ResponseWriter, r *http.Request) {
-
-	var receivedMetric MetricsCounter
-	metricName := chi.URLParam(r, "metricName")
-	metricValue := chi.URLParam(r, "metricValue")
-	receivedMetric.ID = metricName
-	var err error
-	receivedMetric.Value, err = strconv.ParseInt(metricValue, 0, 64)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-	}
-	previousValue := CounterMemory[receivedMetric.ID]
-	CounterMemory[receivedMetric.ID] = receivedMetric.Value + previousValue
-
-	for _, value := range CounterMemory {
-		fmt.Println(value)
+	} else {
+		w.WriteHeader(501)
 	}
 
 }
-func valueOfGaugeMetric(w http.ResponseWriter, r *http.Request) {
-	metricName := chi.URLParam(r, "metricName")
 
-	if value, ok := GaugeMemory[metricName]; ok {
-		fmt.Fprintln(w, value)
+func valueOfMetric(w http.ResponseWriter, r *http.Request) {
+	metricType := chi.URLParam(r, "metricType")
+	metricName := chi.URLParam(r, "metricName")
+	if metricType == "counter" {
+		if value, ok := CounterMemory[metricName]; ok {
+			fmt.Fprintln(w, value)
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	} else if metricType == "gauge" {
+		if value, ok := GaugeMemory[metricName]; ok {
+			fmt.Fprintln(w, value)
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
 	} else {
 		w.WriteHeader(http.StatusNotFound)
+
 	}
-
-}
-
-func valueOfCounterMetric(w http.ResponseWriter, r *http.Request) {
-	metricName := chi.URLParam(r, "metricName")
-
-	if value, ok := CounterMemory[metricName]; ok {
-		fmt.Fprintln(w, value)
-	} else {
-		w.WriteHeader(http.StatusNotFound)
-	}
-
 }
 func listMetrics(w http.ResponseWriter, r *http.Request) {
 
@@ -112,20 +104,12 @@ func main() {
 
 		})
 		r.Post("/update/{metricType}/*", func(w http.ResponseWriter, r *http.Request) {
-			metricType := chi.URLParam(r, "metricType")
-
-			fmt.Println(metricType)
-			if metricType != "gauge" && metricType != "counter" {
-				w.WriteHeader(501)
-			} else {
-				w.WriteHeader(404)
-			}
+			fmt.Println()
+			w.WriteHeader(404)
 
 		})
-		r.Post("/update/gauge/{metricName}/{metricValue}", receiveGauge)
-		r.Post("/update/counter/{metricName}/{metricValue}", receiveCounter)
-		r.Get("/value/gauge/{metricName}", valueOfGaugeMetric)
-		r.Get("/value/counter/{metricName}", valueOfCounterMetric)
+		r.Post("/update/{metricType}/{metricName}/{metricValue}", receiveMetric)
+		r.Get("/value/metricType/{metricName}", valueOfMetric)
 	})
 
 	http.ListenAndServe(":8080", r)

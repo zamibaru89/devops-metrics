@@ -74,6 +74,7 @@ func sendPOST(urlAction string, urlMetricType string, urlMetricKey string, urlMe
 		fmt.Println(err)
 		return
 	}
+
 	res, err := client.Do(req)
 	if err != nil {
 		fmt.Println(err)
