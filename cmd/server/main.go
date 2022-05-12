@@ -110,6 +110,8 @@ func receiveMetricJSON(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&m)
 	if err != nil {
 		//http.Error(w, err.Error(), http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
+		render.JSON(w, r, m)
 		return
 	}
 	if m.MType == "gauge" {
@@ -133,6 +135,8 @@ func receiveMetricJSON(w http.ResponseWriter, r *http.Request) {
 			CounterMetric.mutex.Unlock()
 			render.JSON(w, r, m)
 		}
+	} else {
+		render.JSON(w, r, m)
 	}
 
 }
