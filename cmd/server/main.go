@@ -136,7 +136,7 @@ func receiveMetricJSON(w http.ResponseWriter, r *http.Request) {
 			render.JSON(w, r, m)
 		}
 	} else {
-		render.JSON(w, r, m)
+		w.WriteHeader(http.StatusBadRequest)
 	}
 
 }
