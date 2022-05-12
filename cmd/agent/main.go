@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"math/rand"
@@ -10,7 +11,6 @@ import (
 	"os/signal"
 	"path"
 	"runtime"
-	"strconv"
 	"syscall"
 	"time"
 )
@@ -39,16 +39,30 @@ func (m *MetricGauge) UpdateMetrics() {
 	m.RandomValue = rand.Float64()
 }
 
+type Metrics struct {
+	ID    string   `json:"id"`              // имя метрики
+	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
+	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
+	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
+}
+
 func (m *MetricGauge) SendMetrics() {
-	x := make(map[string]interface{})
+	x := make(map[string]float64)
 	j, _ := json.Marshal(m)
+
 	json.Unmarshal(j, &x)
 
 	for _, v := range listGauges {
 		value := x[v]
+		var m Metrics
+		m.ID = v
+		m.MType = "gauge"
+		m.Value = &value
+		body, _ := json.Marshal(m)
+		//u.Path = path.Join("update", "gauge", v, fmt.Sprintf("%f", value))
+		u.Path = path.Join("update")
 
-		u.Path = path.Join("update", "gauge", v, fmt.Sprintf("%f", value))
-		sendPOST(*u)
+		sendPOST(*u, body)
 	}
 
 }
@@ -63,26 +77,34 @@ func (m *MetricCounter) SendMetrics() {
 	json.Unmarshal(j, &xc)
 
 	for _, v := range listCounters {
-		value := xc[v]
+		delta := xc[v]
+		var m Metrics
+		m.ID = v
+		m.MType = "counter"
+		m.Delta = &delta
+		body, _ := json.Marshal(m)
+		//u.Path = path.Join("update", "counter", v, strconv.FormatInt(value, 10))
+		u.Path = path.Join("update")
 
-		u.Path = path.Join("update", "counter", v, strconv.FormatInt(value, 10))
-		sendPOST(*u)
+		sendPOST(*u, body)
 	}
 
 }
 
-func sendPOST(u url.URL) {
+func sendPOST(u url.URL, b []byte) {
 	method := "POST"
 	client := &http.Client{}
 
-	req, err := http.NewRequest(method, u.String(), nil)
-	req.Header.Add("Content-Type", "Content-Type: text/plain")
+	req, err := http.NewRequest(method, u.String(), bytes.NewBuffer(b))
+	req.Header.Add("Content-Type", "application/json")
+
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
 	res, err := client.Do(req)
+
 	if err != nil {
 		fmt.Println(err)
 		return

@@ -1,8 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/render"
+	_ "github.com/go-chi/render"
 	"net/http"
 	"strconv"
 	"sync"
@@ -96,6 +99,72 @@ func listMetrics(w http.ResponseWriter, r *http.Request) {
 
 }
 
+type Metrics struct {
+	ID    string   `json:"id"`              // имя метрики
+	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
+	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
+	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
+}
+
+func receiveMetricJSON(w http.ResponseWriter, r *http.Request) {
+	var m Metrics
+	err := json.NewDecoder(r.Body).Decode(&m)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if m.MType == "gauge" {
+		if m.Value == nil {
+			w.WriteHeader(http.StatusBadRequest)
+		} else {
+			GaugeMetric.mutex.Lock()
+			GaugeMetric.metric[m.ID] = *m.Value
+			GaugeMetric.mutex.Unlock()
+			render.JSON(w, r, m)
+		}
+	} else if m.MType == "counter" {
+		if m.Delta == nil {
+			w.WriteHeader(http.StatusBadRequest)
+		} else {
+			previousValue := CounterMetric.metric[m.ID]
+			CounterMetric.mutex.Lock()
+			CounterMetric.metric[m.ID] = *m.Delta + previousValue
+			CounterMetric.mutex.Unlock()
+			render.JSON(w, r, m)
+		}
+	}
+
+}
+
+func valueOfMetricJSON(w http.ResponseWriter, r *http.Request) {
+	var m Metrics
+	err := json.NewDecoder(r.Body).Decode(&m)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if m.MType == "counter" {
+		if value, ok := CounterMetric.metric[m.ID]; ok {
+			m.Delta = &value
+			render.JSON(w, r, m)
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	} else if m.MType == "gauge" {
+		if value, ok := GaugeMetric.metric[m.ID]; ok {
+			m.Value = &value
+			render.JSON(w, r, m)
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	} else {
+		w.WriteHeader(http.StatusNotFound)
+
+	}
+
+}
+
 type MetricsGauge struct {
 	ID    string
 	Value float64
@@ -127,6 +196,8 @@ func main() {
 			w.WriteHeader(404)
 
 		})
+		r.Post("/update", receiveMetricJSON)
+		r.Post("/value", valueOfMetricJSON)
 		r.Post("/update/{metricType}/{metricName}/{metricValue}", receiveMetric)
 		r.Get("/value/{metricType}/{metricName}", valueOfMetric)
 	})
