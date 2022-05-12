@@ -109,7 +109,7 @@ func receiveMetricJSON(w http.ResponseWriter, r *http.Request) {
 	var m Metrics
 	err := json.NewDecoder(r.Body).Decode(&m)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		//http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	if m.MType == "gauge" {
@@ -124,6 +124,8 @@ func receiveMetricJSON(w http.ResponseWriter, r *http.Request) {
 	} else if m.MType == "counter" {
 		if m.Delta == nil {
 			w.WriteHeader(http.StatusBadRequest)
+			CounterMetric.mutex.Unlock()
+			render.JSON(w, r, m)
 		} else {
 			previousValue := CounterMetric.metric[m.ID]
 			CounterMetric.mutex.Lock()
