@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
-	_ "github.com/go-chi/render"
 	"net/http"
 	"strconv"
 	"sync"
