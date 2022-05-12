@@ -97,7 +97,6 @@ func sendPOST(u url.URL, b []byte) {
 
 	req, err := http.NewRequest(method, u.String(), bytes.NewBuffer(b))
 	req.Header.Add("Content-Type", "application/json")
-	req.Close = true
 
 	if err != nil {
 		fmt.Println(err)
@@ -105,7 +104,7 @@ func sendPOST(u url.URL, b []byte) {
 	}
 
 	res, err := client.Do(req)
-
+	fmt.Println(req, res)
 	if err != nil {
 		fmt.Println(err)
 		return
