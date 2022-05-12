@@ -117,7 +117,7 @@ func main() {
 	var metricC MetricCounter
 
 	pullTicker := time.NewTicker(2 * time.Second)
-	pushTicker := time.NewTicker(10 * time.Second)
+	pushTicker := time.NewTicker(30 * time.Second)
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT)
