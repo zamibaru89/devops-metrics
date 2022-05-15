@@ -119,7 +119,7 @@ func main() {
 	pullTicker := time.NewTicker(2 * time.Second)
 	pushTicker := time.NewTicker(18 * time.Second)
 
-	sigs := make(chan os.Signal, 1)
+	sigs := make(chan os.Signal, 4)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT)
 
 	for {
