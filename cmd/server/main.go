@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
 	"github.com/spf13/viper"
 	"net/http"
@@ -156,6 +157,7 @@ func valueOfMetricJSON(w http.ResponseWriter, r *http.Request) {
 			render.JSON(w, r, m)
 		} else {
 			w.WriteHeader(http.StatusNotFound)
+
 		}
 	} else if m.MType == "gauge" {
 		if value, ok := GaugeMetric.metric[m.ID]; ok {
@@ -197,6 +199,7 @@ func main() {
 	CounterMetric.metric = make(map[string]int64)
 
 	r := chi.NewRouter()
+	r.Use(middleware.Compress(5))
 	r.Route("/", func(r chi.Router) {
 		r.Get("/", listMetrics)
 		r.Post("/{operation}/", func(w http.ResponseWriter, r *http.Request) {
