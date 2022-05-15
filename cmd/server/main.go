@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/spf13/viper"
 	"net/http"
 	"strconv"
 	"sync"
@@ -178,8 +179,19 @@ type MetricsCounter struct {
 	ID    string
 	Value int64
 }
+type Config struct {
+	ADDRESS string `mapstructure:"ADDRESS"`
+}
+
+func LoadConfig() (config Config, err error) {
+	viper.SetDefault("ADDRESS", ":8080")
+	viper.AutomaticEnv()
+	err = viper.Unmarshal(&config)
+	return
+}
 
 func main() {
+	config, _ := LoadConfig()
 
 	GaugeMetric.metric = make(map[string]float64)
 	CounterMetric.metric = make(map[string]int64)
@@ -207,5 +219,5 @@ func main() {
 		r.Get("/value/{metricType}/{metricName}", valueOfMetric)
 	})
 
-	http.ListenAndServe(":8080", r)
+	http.ListenAndServe(config.ADDRESS, r)
 }

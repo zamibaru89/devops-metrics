@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/spf13/viper"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -112,13 +113,32 @@ func sendPOST(u url.URL, b []byte) {
 	defer res.Body.Close()
 
 }
+
+type Config struct {
+	ADDRESS        string `mapstructure:"ADDRESS"`
+	ReportInterval string `mapstructure:"REPORT_INTERVAL"`
+	PollInterval   string `mapstructure:"POLL_INTERVAL"`
+}
+
+func LoadConfig() (config Config, err error) {
+	viper.SetDefault("REPORT_INTERVAL", "10s")
+	viper.SetDefault("ADDRESS", ":8080")
+	viper.SetDefault("POLL_INTERVAL", "2s")
+	viper.AutomaticEnv()
+	err = viper.Unmarshal(&config)
+	return
+}
+
 func main() {
+
 	var metricG MetricGauge
 	var metricC MetricCounter
+	config, _ := LoadConfig()
 
-	pullTicker := time.NewTicker(2 * time.Second)
-	pushTicker := time.NewTicker(18 * time.Second)
-
+	pullDuration, _ := time.ParseDuration(config.PollInterval)
+	reportDuration, _ := time.ParseDuration(config.ReportInterval)
+	pullTicker := time.NewTicker(pullDuration)
+	pushTicker := time.NewTicker(reportDuration)
 	sigs := make(chan os.Signal, 4)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT)
 
