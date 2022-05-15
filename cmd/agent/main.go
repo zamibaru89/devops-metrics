@@ -134,7 +134,7 @@ func main() {
 	var metricG MetricGauge
 	var metricC MetricCounter
 	config, _ := LoadConfig()
-
+	//
 	pullDuration, _ := time.ParseDuration(config.PollInterval)
 	reportDuration, _ := time.ParseDuration(config.ReportInterval)
 	pullTicker := time.NewTicker(pullDuration)
