@@ -19,11 +19,8 @@ import (
 var listGauges = []string{"Alloc", "BuckHashSys", "Frees", "GCCPUFraction", "GCSys", "HeapAlloc", "HeapIdle", "HeapInuse", "HeapObjects", "HeapReleased", "HeapSys", "LastGC", "Lookups", "MCacheInuse", "MCacheSys", "MSpanInuse", "MSpanSys", "Mallocs", "NextGC", "NumForcedGC", "NumGC", "OtherSys", "PauseTotalNs", "StackInuse", "StackSys", "Sys", "TotalAlloc", "RandomValue"}
 var listCounters = []string{"PollCount"}
 
-var serverToSendAddress string = "127.0.0.1:8080"
-
 var u = &url.URL{
 	Scheme: "http",
-	Host:   "localhost:8080",
 }
 
 type MetricCounter struct {
@@ -48,6 +45,7 @@ type Metrics struct {
 }
 
 func (m *MetricGauge) SendMetrics() {
+	config, _ := LoadConfig()
 	x := make(map[string]float64)
 	j, _ := json.Marshal(m)
 
@@ -62,7 +60,7 @@ func (m *MetricGauge) SendMetrics() {
 		body, _ := json.Marshal(m)
 		//u.Path = path.Join("update", "gauge", v, fmt.Sprintf("%f", value))
 		u.Path = path.Join("update")
-
+		u.Host = config.ADDRESS
 		sendPOST(*u, body)
 	}
 
@@ -73,6 +71,7 @@ func (m *MetricCounter) UpdateMetrics() {
 }
 
 func (m *MetricCounter) SendMetrics() {
+	config, _ := LoadConfig()
 	xc := make(map[string]int64)
 	j, _ := json.Marshal(m)
 	json.Unmarshal(j, &xc)
@@ -86,7 +85,7 @@ func (m *MetricCounter) SendMetrics() {
 		body, _ := json.Marshal(m)
 		//u.Path = path.Join("update", "counter", v, strconv.FormatInt(value, 10))
 		u.Path = path.Join("update")
-
+		u.Host = config.ADDRESS
 		sendPOST(*u, body)
 	}
 
@@ -122,7 +121,7 @@ type Config struct {
 
 func LoadConfig() (config Config, err error) {
 	viper.SetDefault("REPORT_INTERVAL", "10s")
-	viper.SetDefault("ADDRESS", ":8080")
+	viper.SetDefault("ADDRESS", "localhost:8080")
 	viper.SetDefault("POLL_INTERVAL", "2s")
 	viper.AutomaticEnv()
 	err = viper.Unmarshal(&config)
@@ -134,7 +133,7 @@ func main() {
 	var metricG MetricGauge
 	var metricC MetricCounter
 	config, _ := LoadConfig()
-	//
+
 	pullDuration, _ := time.ParseDuration(config.PollInterval)
 	reportDuration, _ := time.ParseDuration(config.ReportInterval)
 	pullTicker := time.NewTicker(pullDuration)
