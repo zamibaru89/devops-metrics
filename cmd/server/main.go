@@ -211,13 +211,15 @@ func main() {
 	//	}
 	//
 	//})
-	r.Post("/update/{metricType}/*", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(404)
+	r.Route("/update", func(r chi.Router) {
+		r.Post("/update/{metricType}/*", func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(404)
 
+		})
+		r.Post("/update", receiveMetricJSON)
+		r.Post("/update/{metricType}/{metricName}/{metricValue}", receiveMetric)
 	})
-	r.Post("/update", receiveMetricJSON)
 	r.Post("/value", valueOfMetricJSON)
-	r.Post("/update/{metricType}/{metricName}/{metricValue}", receiveMetric)
 	r.Get("/value/{metricType}/{metricName}", valueOfMetric)
 
 	http.ListenAndServe(config.ADDRESS, r)
