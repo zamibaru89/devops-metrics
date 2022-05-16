@@ -130,6 +130,10 @@ func LoadConfig() (config Config, err error) {
 	return
 }
 
+func handleSignal(signal os.Signal) {
+	fmt.Println("* Got:", signal)
+	os.Exit(-1)
+}
 func main() {
 
 	var metricG MetricGauge
@@ -137,31 +141,33 @@ func main() {
 	config, _ := LoadConfig()
 	//
 	pullDuration, _ := time.ParseDuration(config.PollInterval)
-	reportDuration, _ := time.ParseDuration(config.ReportInterval)
+	//reportDuration, _ := time.ParseDuration(config.ReportInterval)
 	pullTicker := time.NewTicker(pullDuration)
-	pushTicker := time.NewTicker(reportDuration)
+	//pushTicker := time.NewTicker(reportDuration)
 	sigs := make(chan os.Signal, 4)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT)
-
-	for {
-		select {
-		case <-pullTicker.C:
+	go func() {
+		for {
+			sig := <-sigs
+			handleSignal(sig)
+		}
+	}()
+	go func() {
+		for range pullTicker.C {
 			metricG.UpdateMetrics()
 			metricC.UpdateMetrics()
 			fmt.Println("running metric.UpdateMetrics()")
+		}
+	}()
+	tickerPoll := time.NewTicker(time.Millisecond * 10000)
 
-		case <-pushTicker.C:
+	go func() {
+		for range tickerPoll.C {
 			metricG.SendMetrics()
 			metricC.SendMetrics()
-		case <-sigs:
-			fmt.Println("signal received")
-			pullTicker.Stop()
-			pushTicker.Stop()
-			fmt.Println("Graceful shutdown")
-			os.Exit(1)
 
 		}
-
-	}
+	}()
+	select {}
 
 }
