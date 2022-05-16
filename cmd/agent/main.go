@@ -96,8 +96,7 @@ func sendPOST(u url.URL, b []byte) {
 	method := "POST"
 	client := &http.Client{}
 
-	//req, err := http.NewRequest(method, u.String(), bytes.NewBuffer(b))
-	req, err := http.NewRequest(method, "http://localhost:8080/update", bytes.NewBuffer(b))
+	req, err := http.NewRequest(method, u.String(), bytes.NewBuffer(b))
 	req.Header.Add("Content-Type", "application/json")
 
 	if err != nil {
@@ -130,10 +129,6 @@ func LoadConfig() (config Config, err error) {
 	return
 }
 
-func handleSignal(signal os.Signal) {
-	fmt.Println("* Got:", signal)
-	os.Exit(-1)
-}
 func main() {
 
 	var metricG MetricGauge
@@ -141,33 +136,31 @@ func main() {
 	config, _ := LoadConfig()
 	//
 	pullDuration, _ := time.ParseDuration(config.PollInterval)
-	//reportDuration, _ := time.ParseDuration(config.ReportInterval)
+	reportDuration, _ := time.ParseDuration(config.ReportInterval)
 	pullTicker := time.NewTicker(pullDuration)
-	//pushTicker := time.NewTicker(reportDuration)
+	pushTicker := time.NewTicker(reportDuration)
 	sigs := make(chan os.Signal, 4)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT)
-	go func() {
-		for {
-			sig := <-sigs
-			handleSignal(sig)
-		}
-	}()
-	go func() {
-		for range pullTicker.C {
+
+	for {
+		select {
+		case <-pullTicker.C:
 			metricG.UpdateMetrics()
 			metricC.UpdateMetrics()
 			fmt.Println("running metric.UpdateMetrics()")
-		}
-	}()
-	tickerPoll := time.NewTicker(time.Millisecond * 10000)
 
-	go func() {
-		for range tickerPoll.C {
+		case <-pushTicker.C:
 			metricG.SendMetrics()
 			metricC.SendMetrics()
+		case <-sigs:
+			fmt.Println("signal received")
+			pullTicker.Stop()
+			pushTicker.Stop()
+			fmt.Println("Graceful shutdown")
+			os.Exit(1)
 
 		}
-	}()
-	select {}
+
+	}
 
 }
