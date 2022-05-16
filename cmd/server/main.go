@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
 	"github.com/spf13/viper"
@@ -202,16 +201,7 @@ func main() {
 	r.Use(middleware.Compress(5))
 	r.Route("/", func(r chi.Router) {
 		r.Get("/", listMetrics)
-		r.Post("/{operation}/", func(w http.ResponseWriter, r *http.Request) {
-			operation := chi.URLParam(r, "operation")
 
-			if operation != "update" {
-				w.WriteHeader(404)
-			} else if operation != "value" {
-				w.WriteHeader(404)
-			}
-
-		})
 		r.Post("/update/{metricType}/*", func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(404)
 
