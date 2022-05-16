@@ -199,9 +199,22 @@ func main() {
 
 	r := chi.NewRouter()
 	r.Get("/", listMetrics)
+	r.Post("/{operation}/", func(w http.ResponseWriter, r *http.Request) {
+		operation := chi.URLParam(r, "operation")
+
+		if operation != "update" {
+			w.WriteHeader(404)
+		} else if operation != "value" {
+			w.WriteHeader(404)
+		}
+	})
 	r.Route("/update", func(r chi.Router) {
 		r.Post("/", receiveMetricJSON)
 		r.Post("/update/{metricType}/{metricName}/{metricValue}", receiveMetric)
+		r.Post("/update/{metricType}/*", func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(404)
+
+		})
 	})
 	r.Route("/value", func(r chi.Router) {
 		r.Post("/", valueOfMetricJSON)
