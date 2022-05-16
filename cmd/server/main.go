@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/chi"
 	"github.com/go-chi/render"
 	"github.com/spf13/viper"
 	"net/http"
@@ -198,17 +198,13 @@ func main() {
 	CounterMetric.metric = make(map[string]int64)
 
 	r := chi.NewRouter()
-	r.Use(middleware.Compress(5))
-	r.Route("/", func(r chi.Router) {
-		r.Get("/", listMetrics)
-
-		r.Post("/update/{metricType}/*", func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(404)
-
-		})
-		r.Post("/update", receiveMetricJSON)
-		r.Post("/value", valueOfMetricJSON)
+	r.Get("/", listMetrics)
+	r.Route("/update", func(r chi.Router) {
+		r.Post("/", receiveMetricJSON)
 		r.Post("/update/{metricType}/{metricName}/{metricValue}", receiveMetric)
+	})
+	r.Route("/value", func(r chi.Router) {
+		r.Post("/", valueOfMetricJSON)
 		r.Get("/value/{metricType}/{metricName}", valueOfMetric)
 	})
 
