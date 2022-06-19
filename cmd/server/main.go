@@ -44,13 +44,22 @@ func receiveMetric(w http.ResponseWriter, r *http.Request) {
 func valueOfMetric(w http.ResponseWriter, r *http.Request) {
 
 	metricName := chi.URLParam(r, "metricName")
+	metricType := chi.URLParam(r, "metricName")
+	if metricType == "gauge" {
+		value, err := Server.GetGauge(metricName)
+		if err != nil {
+			w.WriteHeader(http.StatusNotFound)
 
-	value, err := Server.GetMetric(metricName)
-	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
+		}
+		fmt.Fprintln(w, value)
+	} else if metricType == "counter" {
+		value, err := Server.GetCounter(metricName)
+		if err != nil {
+			w.WriteHeader(http.StatusNotFound)
 
+		}
+		fmt.Fprintln(w, value)
 	}
-	fmt.Fprintln(w, value)
 
 }
 func listMetrics(w http.ResponseWriter, r *http.Request) {
@@ -97,14 +106,12 @@ func valueOfMetricJSON(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if m.MType == "counter" {
-		value, _ := Server.GetMetric(m.ID)
-		d, _ := strconv.ParseInt(value, 0, 64)
-		m.Delta = &d
+		value, _ := Server.GetCounter(m.ID)
+		m.Delta = &value
 		render.JSON(w, r, m)
 	} else if m.MType == "gauge" {
-		value, _ := Server.GetMetric(m.ID)
-		temp, _ := strconv.ParseFloat(value, 64)
-		m.Value = &temp
+		value, _ := Server.GetGauge(m.ID)
+		m.Value = &value
 		render.JSON(w, r, m)
 	} else {
 		w.WriteHeader(http.StatusNotFound)

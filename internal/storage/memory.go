@@ -2,7 +2,6 @@ package storage
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 )
 
@@ -33,16 +32,21 @@ func (m *MemoryStorage) AddGaugeMetric(name string, value float64) {
 	m.GaugeMetric[name] = value
 }
 
-func (m *MemoryStorage) GetMetric(metricName string) (string, error) {
+func (m *MemoryStorage) GetGauge(metricName string) (float64, error) {
+
+	if value, ok := m.GaugeMetric[metricName]; ok {
+		return value, nil
+	}
+	return 0, errors.New("Not found")
+
+}
+
+func (m *MemoryStorage) GetCounter(metricName string) (int64, error) {
 
 	if value, ok := m.CounterMetric[metricName]; ok {
-		return fmt.Sprintf("%v", value), nil
+		return value, nil
 	}
-	if value, ok := m.GaugeMetric[metricName]; ok {
-		return fmt.Sprintf("%.3f", value), nil
-	}
-	return "", errors.New("can`t find metric")
-
+	return 0, errors.New("Not found")
 }
 
 func (m *MemoryStorage) AsJson() MetricStorage {

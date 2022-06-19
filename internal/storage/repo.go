@@ -3,7 +3,8 @@ package storage
 type Repo interface {
 	AddCounterMetric(string, int64)
 	AddGaugeMetric(string, float64)
-	GetMetric(string) (string, error)
+	GetCounter(string) (int64, error)
+	GetGauge(string) (float64, error)
 	AsJson() MetricStorage
 }
 
