@@ -44,7 +44,7 @@ func receiveMetric(w http.ResponseWriter, r *http.Request) {
 func valueOfMetric(w http.ResponseWriter, r *http.Request) {
 
 	metricName := chi.URLParam(r, "metricName")
-	metricType := chi.URLParam(r, "metricName")
+	metricType := chi.URLParam(r, "metricType")
 	if metricType == "gauge" {
 		value, err := Server.GetGauge(metricName)
 		if err != nil {
