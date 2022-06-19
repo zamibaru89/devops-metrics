@@ -7,25 +7,12 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/spf13/viper"
+	"github.com/zamibaru89/devops-metrics/internal/storage"
 	"net/http"
 	"strconv"
-	"sync"
 )
 
-type GaugeMemory struct {
-	metric map[string]float64
-	mutex  sync.Mutex
-}
-
-type CounterMemory struct {
-	metric map[string]int64
-	mutex  sync.Mutex
-}
-
-var (
-	GaugeMetric   GaugeMemory
-	CounterMetric CounterMemory
-)
+var Server = storage.NewMemoryStorage()
 
 func receiveMetric(w http.ResponseWriter, r *http.Request) {
 	metricType := chi.URLParam(r, "metricType")
@@ -33,31 +20,20 @@ func receiveMetric(w http.ResponseWriter, r *http.Request) {
 	metricValue := chi.URLParam(r, "metricValue")
 
 	if metricType == "gauge" {
-		var receivedMetric MetricsGauge
-		var err error
-		receivedMetric.ID = metricName
-		receivedMetric.Value, err = strconv.ParseFloat(metricValue, 64)
+		Value, err := strconv.ParseFloat(metricValue, 64)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		GaugeMetric.mutex.Lock()
-		GaugeMetric.metric[receivedMetric.ID] = receivedMetric.Value
-		GaugeMetric.mutex.Unlock()
-
+		Server.AddGaugeMetric(metricName, Value)
 	} else if metricType == "counter" {
-		var receivedMetric MetricsCounter
-		receivedMetric.ID = metricName
-		var err error
-		receivedMetric.Value, err = strconv.ParseInt(metricValue, 0, 64)
+
+		Value, err := strconv.ParseInt(metricValue, 0, 64)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		previousValue := CounterMetric.metric[receivedMetric.ID]
-		CounterMetric.mutex.Lock()
-		CounterMetric.metric[receivedMetric.ID] = receivedMetric.Value + previousValue
-		CounterMetric.mutex.Unlock()
+		Server.AddCounterMetric(metricName, Value)
 
 	} else {
 		w.WriteHeader(501)
@@ -66,71 +42,27 @@ func receiveMetric(w http.ResponseWriter, r *http.Request) {
 }
 
 func valueOfMetric(w http.ResponseWriter, r *http.Request) {
-	metricType := chi.URLParam(r, "metricType")
+
 	metricName := chi.URLParam(r, "metricName")
-	if metricType == "counter" {
-		if value, ok := CounterMetric.metric[metricName]; ok {
-			fmt.Fprintln(w, value)
-		} else {
-			w.WriteHeader(http.StatusNotFound)
-		}
-	} else if metricType == "gauge" {
-		if value, ok := GaugeMetric.metric[metricName]; ok {
-			fmt.Fprintln(w, value)
-		} else {
-			w.WriteHeader(http.StatusNotFound)
-		}
-	} else {
+
+	value, err := Server.GetMetric(metricName)
+	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 
 	}
+	fmt.Fprintln(w, value)
+
 }
 func listMetrics(w http.ResponseWriter, r *http.Request) {
-	json, _ := json.Marshal(GaugeMetric.AsStruct())
-	fmt.Println(string(json))
-	fmt.Fprintln(w, "#########GAUGE METRICS#########")
-	for key, value := range GaugeMetric.metric {
-		fmt.Fprintln(w, key, value)
-
-	}
-	fmt.Fprintln(w, "#########COUNTER METRICS#########")
-	for key, value := range CounterMetric.metric {
-		fmt.Fprintln(w, key, value)
-
-	}
-
-}
-
-type Metrics struct {
-	ID    string   `json:"id"`              // имя метрики
-	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
-	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
-	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
-}
-
-type MetricStorage struct {
-	Metrics []Metrics
-}
-
-func (m *GaugeMemory) AsStruct() MetricStorage {
-	var metrics MetricStorage
-	for k, v := range m.metric {
-		value := v
-		metrics.Metrics = append(metrics.Metrics, Metrics{
-			ID:    k,
-			MType: "gauge",
-			Value: &value,
-		})
-	}
-
-	return metrics
+	json, _ := json.Marshal(Server.AsJson())
+	fmt.Fprintln(w, string(json))
 }
 
 func receiveMetricJSON(w http.ResponseWriter, r *http.Request) {
-	var m Metrics
+	var m storage.Metric
 	err := json.NewDecoder(r.Body).Decode(&m)
 	if err != nil {
-		//http.Error(w, err.Error(), http.StatusBadRequest)
+
 		w.WriteHeader(http.StatusBadRequest)
 		render.JSON(w, r, m)
 		return
@@ -139,21 +71,15 @@ func receiveMetricJSON(w http.ResponseWriter, r *http.Request) {
 		if m.Value == nil {
 			w.WriteHeader(http.StatusBadRequest)
 		} else {
-			GaugeMetric.mutex.Lock()
-			GaugeMetric.metric[m.ID] = *m.Value
-			GaugeMetric.mutex.Unlock()
+			Server.AddGaugeMetric(m.ID, *m.Value)
 			render.JSON(w, r, m)
 		}
 	} else if m.MType == "counter" {
 		if m.Delta == nil {
 			w.WriteHeader(http.StatusBadRequest)
-			CounterMetric.mutex.Unlock()
 			render.JSON(w, r, m)
 		} else {
-			previousValue := CounterMetric.metric[m.ID]
-			CounterMetric.mutex.Lock()
-			CounterMetric.metric[m.ID] = *m.Delta + previousValue
-			CounterMetric.mutex.Unlock()
+			Server.AddCounterMetric(m.ID, *m.Delta)
 			render.JSON(w, r, m)
 		}
 	} else {
@@ -163,7 +89,7 @@ func receiveMetricJSON(w http.ResponseWriter, r *http.Request) {
 }
 
 func valueOfMetricJSON(w http.ResponseWriter, r *http.Request) {
-	var m Metrics
+	var m storage.Metric
 	err := json.NewDecoder(r.Body).Decode(&m)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -171,35 +97,21 @@ func valueOfMetricJSON(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if m.MType == "counter" {
-		if value, ok := CounterMetric.metric[m.ID]; ok {
-			m.Delta = &value
-			render.JSON(w, r, m)
-		} else {
-			w.WriteHeader(http.StatusNotFound)
-
-		}
+		value, _ := Server.GetMetric(m.ID)
+		d, _ := strconv.ParseInt(value, 0, 64)
+		m.Delta = &d
+		render.JSON(w, r, m)
 	} else if m.MType == "gauge" {
-		if value, ok := GaugeMetric.metric[m.ID]; ok {
-			m.Value = &value
-			render.JSON(w, r, m)
-		} else {
-			w.WriteHeader(http.StatusNotFound)
-		}
+		value, _ := Server.GetMetric(m.ID)
+		temp, _ := strconv.ParseFloat(value, 64)
+		m.Value = &temp
+		render.JSON(w, r, m)
 	} else {
 		w.WriteHeader(http.StatusNotFound)
-
 	}
 
 }
 
-type MetricsGauge struct {
-	ID    string
-	Value float64
-}
-type MetricsCounter struct {
-	ID    string
-	Value int64
-}
 type Config struct {
 	ADDRESS string `mapstructure:"ADDRESS"`
 }
@@ -214,10 +126,6 @@ func LoadConfig() (config Config, err error) {
 
 func main() {
 	config, _ := LoadConfig()
-
-	GaugeMetric.metric = make(map[string]float64)
-
-	CounterMetric.metric = make(map[string]int64)
 
 	r := chi.NewRouter()
 	r.Use(middleware.Compress(5))
