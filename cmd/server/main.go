@@ -86,7 +86,8 @@ func valueOfMetric(w http.ResponseWriter, r *http.Request) {
 	}
 }
 func listMetrics(w http.ResponseWriter, r *http.Request) {
-
+	json, _ := json.Marshal(GaugeMetric.AsStruct())
+	fmt.Println(string(json))
 	fmt.Fprintln(w, "#########GAUGE METRICS#########")
 	for key, value := range GaugeMetric.metric {
 		fmt.Fprintln(w, key, value)
@@ -105,6 +106,24 @@ type Metrics struct {
 	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
 	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
 	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
+}
+
+type MetricStorage struct {
+	Metrics []Metrics
+}
+
+func (m *GaugeMemory) AsStruct() MetricStorage {
+	var metrics MetricStorage
+	for k, v := range m.metric {
+		value := v
+		metrics.Metrics = append(metrics.Metrics, Metrics{
+			ID:    k,
+			MType: "gauge",
+			Value: &value,
+		})
+	}
+
+	return metrics
 }
 
 func receiveMetricJSON(w http.ResponseWriter, r *http.Request) {
@@ -197,6 +216,7 @@ func main() {
 	config, _ := LoadConfig()
 
 	GaugeMetric.metric = make(map[string]float64)
+
 	CounterMetric.metric = make(map[string]int64)
 
 	r := chi.NewRouter()
