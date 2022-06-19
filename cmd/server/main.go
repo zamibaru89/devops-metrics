@@ -8,8 +8,12 @@ import (
 	"github.com/go-chi/render"
 	"github.com/spf13/viper"
 	"github.com/zamibaru89/devops-metrics/internal/storage"
+	"io/ioutil"
+	"log"
 	"net/http"
+	"os"
 	"strconv"
+	"time"
 )
 
 var Server = storage.NewMemoryStorage()
@@ -120,20 +124,86 @@ func valueOfMetricJSON(w http.ResponseWriter, r *http.Request) {
 }
 
 type Config struct {
-	ADDRESS string `mapstructure:"ADDRESS"`
+	ADDRESS       string `mapstructure:"ADDRESS"`
+	FilePath      string `mapstructure:"STORE_FILE "`
+	StoreInterval string `mapstructure:"STORE_INTERVAL"`
+	Restore       bool   `mapstructure:"RESTORE"`
 }
 
 func LoadConfig() (config Config, err error) {
 	viper.SetDefault("ADDRESS", ":8080")
+	viper.SetDefault("STORE_FILE ", "C:\\temp\\metrics.json")
+	viper.SetDefault("STORE_INTERVAL", "300s")
+	viper.SetDefault("RESTORE", true)
 	viper.AutomaticEnv()
 
 	err = viper.Unmarshal(&config)
 	return
 }
 
+func SaveMetricToDisk(config Config, m storage.Repo) {
+
+	filePath := config.FilePath
+	fileBits := os.O_WRONLY | os.O_CREATE | os.O_TRUNC
+
+	file, err := os.OpenFile(filePath, fileBits, 0600)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	data, err := json.Marshal(m.AsJson())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, err = file.Write(data)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	file.Close()
+
+}
+
+func RestoreMetricsFromDisk(config Config, r storage.Repo) storage.Repo {
+	repo := r
+	path := config.FilePath
+
+	data, _ := ioutil.ReadFile(path)
+
+	metrics := storage.MetricStorage{}
+	json.Unmarshal(data, &metrics)
+
+	for i := range metrics.Metrics {
+		metricName := metrics.Metrics[i].ID
+		if metrics.Metrics[i].MType == "counter" {
+			Delta := metrics.Metrics[i].Delta
+			repo.AddCounterMetric(metricName, *Delta)
+		}
+		if metrics.Metrics[i].MType == "gauge" {
+			Value := metrics.Metrics[i].Value
+			repo.AddGaugeMetric(metricName, *Value)
+		}
+	}
+	return r
+}
+
 func main() {
 	config, _ := LoadConfig()
-
+	storeDuration, _ := time.ParseDuration(config.StoreInterval)
+	storeTicker := time.NewTicker(storeDuration)
+	if config.Restore == true {
+		RestoreMetricsFromDisk(config, Server)
+	}
+	go func() {
+		for {
+			select {
+			case <-storeTicker.C:
+				SaveMetricToDisk(config, Server)
+				fmt.Println("Save to disk")
+			}
+		}
+	}()
 	r := chi.NewRouter()
 	r.Use(middleware.Compress(5))
 	r.Get("/", listMetrics)
