@@ -213,7 +213,7 @@ func RestoreMetricsFromDisk(config config.ServerConfig, r storage.Repo) storage.
 }
 
 func main() {
-
+	ServerConfig.Parse()
 	storeDuration, _ := time.ParseDuration(ServerConfig.StoreInterval)
 	storeTicker := time.NewTicker(storeDuration)
 	if ServerConfig.Restore == true {
