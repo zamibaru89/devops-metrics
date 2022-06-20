@@ -142,12 +142,12 @@ func LoadConfig() (config Config, err error) {
 	viper.SetDefault("STORE_FILE ", "C:\\temp\\metrics.json")
 	viper.SetDefault("STORE_INTERVAL", "300s")
 	viper.SetDefault("RESTORE", true)
-	viper.AutomaticEnv()
+
 	viper.BindPFlag("ADDRESS", Cmd.PersistentFlags().Lookup("ADDRESS"))
 	viper.BindPFlag("STORE_FILE", Cmd.PersistentFlags().Lookup("STORE_FILE"))
 	viper.BindPFlag("STORE_INTERVAL", Cmd.PersistentFlags().Lookup("STORE_INTERVAL"))
 	viper.BindPFlag("RESTORE", Cmd.PersistentFlags().Lookup("RESTORE"))
-
+	viper.AutomaticEnv()
 	Cmd.Execute()
 	err = viper.Unmarshal(&config)
 	return

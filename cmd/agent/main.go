@@ -130,10 +130,11 @@ func LoadConfig() (config Config, err error) {
 	viper.SetDefault("REPORT_INTERVAL", "10s")
 	viper.SetDefault("ADDRESS", "localhost:8080")
 	viper.SetDefault("POLL_INTERVAL", "2s")
-	viper.AutomaticEnv()
+
 	viper.BindPFlag("REPORT_INTERVAL", Cmd.PersistentFlags().Lookup("REPORT_INTERVAL"))
 	viper.BindPFlag("ADDRESS", Cmd.PersistentFlags().Lookup("ADDRESS"))
 	viper.BindPFlag("POLL_INTERVAL", Cmd.PersistentFlags().Lookup("POLL_INTERVAL"))
+	viper.AutomaticEnv()
 	Cmd.Execute()
 	err = viper.Unmarshal(&config)
 	return
