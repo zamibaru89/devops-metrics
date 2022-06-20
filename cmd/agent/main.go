@@ -46,8 +46,8 @@ type Metrics struct {
 	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
 }
 
-func (m *MetricGauge) SendMetrics() {
-	config, _ := LoadConfig()
+func (m *MetricGauge) SendMetrics(c Config) {
+
 	x := make(map[string]float64)
 	j, _ := json.Marshal(m)
 
@@ -62,7 +62,7 @@ func (m *MetricGauge) SendMetrics() {
 		body, _ := json.Marshal(m)
 		//u.Path = path.Join("update", "gauge", v, fmt.Sprintf("%f", value))
 		u.Path = path.Join("update")
-		u.Host = config.ADDRESS
+		u.Host = c.ADDRESS
 		sendPOST(*u, body)
 	}
 
@@ -72,8 +72,8 @@ func (m *MetricCounter) UpdateMetrics() {
 	m.PollCount++
 }
 
-func (m *MetricCounter) SendMetrics() {
-	config, _ := LoadConfig()
+func (m *MetricCounter) SendMetrics(c Config) {
+
 	xc := make(map[string]int64)
 	j, _ := json.Marshal(m)
 	json.Unmarshal(j, &xc)
@@ -87,7 +87,7 @@ func (m *MetricCounter) SendMetrics() {
 		body, _ := json.Marshal(m)
 		//u.Path = path.Join("update", "counter", v, strconv.FormatInt(value, 10))
 		u.Path = path.Join("update")
-		u.Host = config.ADDRESS
+		u.Host = c.ADDRESS
 		sendPOST(*u, body)
 	}
 
@@ -123,9 +123,9 @@ type Config struct {
 
 func LoadConfig() (config Config, err error) {
 
-	Cmd.PersistentFlags().StringVarP(&config.ADDRESS, "REPORT_INTERVAL", "r", "", "10s")
+	Cmd.PersistentFlags().StringVarP(&config.ReportInterval, "REPORT_INTERVAL", "r", "", "10s")
 	Cmd.PersistentFlags().StringVarP(&config.ADDRESS, "ADDRESS", "a", "", "URL:PORT")
-	Cmd.PersistentFlags().StringVarP(&config.ADDRESS, "POLL_INTERVAL", "p", "", "2s")
+	Cmd.PersistentFlags().StringVarP(&config.PollInterval, "POLL_INTERVAL", "p", "", "2s")
 
 	viper.SetDefault("REPORT_INTERVAL", "10s")
 	viper.SetDefault("ADDRESS", "localhost:8080")
@@ -161,8 +161,8 @@ func main() {
 			fmt.Println("running metric.UpdateMetrics()")
 
 		case <-pushTicker.C:
-			metricG.SendMetrics()
-			metricC.SendMetrics()
+			metricG.SendMetrics(config)
+			metricC.SendMetrics(config)
 		case <-sigs:
 			fmt.Println("signal received")
 			pullTicker.Stop()

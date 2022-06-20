@@ -134,9 +134,9 @@ type Config struct {
 
 func LoadConfig() (config Config, err error) {
 	Cmd.PersistentFlags().StringVarP(&config.ADDRESS, "ADDRESS", "a", "", "URL:PORT")
-	Cmd.PersistentFlags().StringVarP(&config.ADDRESS, "STORE_FILE", "f", "", "Save to filepath?")
-	Cmd.PersistentFlags().StringVarP(&config.ADDRESS, "STORE_INTERVAL", "i", "", "Store interval in seconds")
-	Cmd.PersistentFlags().StringVarP(&config.ADDRESS, "RESTORE", "r", "", "Restore from File true/false")
+	Cmd.PersistentFlags().StringVarP(&config.FilePath, "STORE_FILE", "f", "", "Save to filepath?")
+	Cmd.PersistentFlags().StringVarP(&config.StoreInterval, "STORE_INTERVAL", "i", "", "Store interval in seconds")
+	Cmd.PersistentFlags().BoolVarP(&config.Restore, "RESTORE", "r", true, "Restore from File true/false")
 
 	viper.SetDefault("ADDRESS", ":8080")
 	viper.SetDefault("STORE_FILE ", "C:\\temp\\metrics.json")
