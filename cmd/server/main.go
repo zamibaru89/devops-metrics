@@ -75,7 +75,7 @@ func valueOfMetric(w http.ResponseWriter, r *http.Request) {
 }
 func listMetrics(w http.ResponseWriter, r *http.Request) {
 	json, _ := json.Marshal(Server.AsJson())
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "text/html")
 	fmt.Fprintln(w, string(json))
 }
 
@@ -163,6 +163,7 @@ func LoadConfig() (config Config, err error) {
 	viper.BindPFlag("STORE_INTERVAL", Cmd.PersistentFlags().Lookup("STORE_INTERVAL"))
 	viper.BindPFlag("RESTORE", Cmd.PersistentFlags().Lookup("RESTORE"))
 	viper.AutomaticEnv()
+
 	Cmd.Execute()
 	err = viper.Unmarshal(&config)
 	return
