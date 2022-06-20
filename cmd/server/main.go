@@ -28,6 +28,7 @@ func receiveMetric(w http.ResponseWriter, r *http.Request) {
 	if metricType == "gauge" {
 		Value, err := strconv.ParseFloat(metricValue, 64)
 		if err != nil {
+			w.Header().Set("Content-Type", "text/html")
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -36,6 +37,7 @@ func receiveMetric(w http.ResponseWriter, r *http.Request) {
 
 		Value, err := strconv.ParseInt(metricValue, 0, 64)
 		if err != nil {
+			w.Header().Set("Content-Type", "text/html")
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -57,19 +59,23 @@ func valueOfMetric(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusNotFound)
 
 		}
+		w.Header().Set("Content-Type", "text/html")
 		fmt.Fprintln(w, value)
 	} else if metricType == "counter" {
 		value, err := Server.GetCounter(metricName)
 		if err != nil {
+			w.Header().Set("Content-Type", "text/html")
 			w.WriteHeader(http.StatusNotFound)
 
 		}
+		w.Header().Set("Content-Type", "text/html")
 		fmt.Fprintln(w, value)
 	}
 
 }
 func listMetrics(w http.ResponseWriter, r *http.Request) {
 	json, _ := json.Marshal(Server.AsJson())
+	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(json))
 }
 
@@ -77,27 +83,33 @@ func receiveMetricJSON(w http.ResponseWriter, r *http.Request) {
 	var m storage.Metric
 	err := json.NewDecoder(r.Body).Decode(&m)
 	if err != nil {
-
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
 		render.JSON(w, r, m)
 		return
 	}
 	if m.MType == "gauge" {
 		if m.Value == nil {
+			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
 		} else {
 			Server.AddGaugeMetric(m.ID, *m.Value)
+			w.Header().Set("Content-Type", "application/json")
 			render.JSON(w, r, m)
 		}
 	} else if m.MType == "counter" {
 		if m.Delta == nil {
+			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
+
 			render.JSON(w, r, m)
 		} else {
 			Server.AddCounterMetric(m.ID, *m.Delta)
+			w.Header().Set("Content-Type", "application/json")
 			render.JSON(w, r, m)
 		}
 	} else {
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
 	}
 
@@ -114,12 +126,15 @@ func valueOfMetricJSON(w http.ResponseWriter, r *http.Request) {
 	if m.MType == "counter" {
 		value, _ := Server.GetCounter(m.ID)
 		m.Delta = &value
+		w.Header().Set("Content-Type", "application/json")
 		render.JSON(w, r, m)
 	} else if m.MType == "gauge" {
 		value, _ := Server.GetGauge(m.ID)
 		m.Value = &value
+		w.Header().Set("Content-Type", "application/json")
 		render.JSON(w, r, m)
 	} else {
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
 	}
 
