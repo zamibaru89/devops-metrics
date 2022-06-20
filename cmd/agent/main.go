@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"math/rand"
 	"net/http"
@@ -16,6 +17,7 @@ import (
 	"time"
 )
 
+var Cmd = &cobra.Command{}
 var listGauges = []string{"Alloc", "BuckHashSys", "Frees", "GCCPUFraction", "GCSys", "HeapAlloc", "HeapIdle", "HeapInuse", "HeapObjects", "HeapReleased", "HeapSys", "LastGC", "Lookups", "MCacheInuse", "MCacheSys", "MSpanInuse", "MSpanSys", "Mallocs", "NextGC", "NumForcedGC", "NumGC", "OtherSys", "PauseTotalNs", "StackInuse", "StackSys", "Sys", "TotalAlloc", "RandomValue"}
 var listCounters = []string{"PollCount"}
 
@@ -120,10 +122,19 @@ type Config struct {
 }
 
 func LoadConfig() (config Config, err error) {
+
+	Cmd.PersistentFlags().StringVarP(&config.ADDRESS, "REPORT_INTERVAL", "r", "", "10s")
+	Cmd.PersistentFlags().StringVarP(&config.ADDRESS, "ADDRESS", "a", "", "URL:PORT")
+	Cmd.PersistentFlags().StringVarP(&config.ADDRESS, "POLL_INTERVAL", "p", "", "2s")
+
 	viper.SetDefault("REPORT_INTERVAL", "10s")
 	viper.SetDefault("ADDRESS", "localhost:8080")
 	viper.SetDefault("POLL_INTERVAL", "2s")
 	viper.AutomaticEnv()
+	viper.BindPFlag("REPORT_INTERVAL", Cmd.PersistentFlags().Lookup("REPORT_INTERVAL"))
+	viper.BindPFlag("ADDRESS", Cmd.PersistentFlags().Lookup("ADDRESS"))
+	viper.BindPFlag("POLL_INTERVAL", Cmd.PersistentFlags().Lookup("POLL_INTERVAL"))
+	Cmd.Execute()
 	err = viper.Unmarshal(&config)
 	return
 }

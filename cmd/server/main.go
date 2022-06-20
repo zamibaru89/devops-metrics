@@ -6,6 +6,7 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/zamibaru89/devops-metrics/internal/storage"
 	"io/ioutil"
@@ -17,6 +18,7 @@ import (
 )
 
 var Server = storage.NewMemoryStorage()
+var Cmd = &cobra.Command{}
 
 func receiveMetric(w http.ResponseWriter, r *http.Request) {
 	metricType := chi.URLParam(r, "metricType")
@@ -131,12 +133,22 @@ type Config struct {
 }
 
 func LoadConfig() (config Config, err error) {
+	Cmd.PersistentFlags().StringVarP(&config.ADDRESS, "ADDRESS", "a", "", "URL:PORT")
+	Cmd.PersistentFlags().StringVarP(&config.ADDRESS, "STORE_FILE", "f", "", "Save to filepath?")
+	Cmd.PersistentFlags().StringVarP(&config.ADDRESS, "STORE_INTERVAL", "i", "", "Store interval in seconds")
+	Cmd.PersistentFlags().StringVarP(&config.ADDRESS, "RESTORE", "r", "", "Restore from File true/false")
+
 	viper.SetDefault("ADDRESS", ":8080")
 	viper.SetDefault("STORE_FILE ", "C:\\temp\\metrics.json")
 	viper.SetDefault("STORE_INTERVAL", "300s")
 	viper.SetDefault("RESTORE", true)
 	viper.AutomaticEnv()
+	viper.BindPFlag("ADDRESS", Cmd.PersistentFlags().Lookup("ADDRESS"))
+	viper.BindPFlag("STORE_FILE", Cmd.PersistentFlags().Lookup("STORE_FILE"))
+	viper.BindPFlag("STORE_INTERVAL", Cmd.PersistentFlags().Lookup("STORE_INTERVAL"))
+	viper.BindPFlag("RESTORE", Cmd.PersistentFlags().Lookup("RESTORE"))
 
+	Cmd.Execute()
 	err = viper.Unmarshal(&config)
 	return
 }
