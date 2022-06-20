@@ -134,8 +134,9 @@ func LoadConfig() (config Config, err error) {
 	viper.BindPFlag("REPORT_INTERVAL", Cmd.PersistentFlags().Lookup("REPORT_INTERVAL"))
 	viper.BindPFlag("ADDRESS", Cmd.PersistentFlags().Lookup("ADDRESS"))
 	viper.BindPFlag("POLL_INTERVAL", Cmd.PersistentFlags().Lookup("POLL_INTERVAL"))
-	viper.AutomaticEnv()
 	Cmd.Execute()
+	viper.AutomaticEnv()
+
 	err = viper.Unmarshal(&config)
 	return
 }

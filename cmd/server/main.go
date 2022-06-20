@@ -162,9 +162,9 @@ func LoadConfig() (config Config, err error) {
 	viper.BindPFlag("STORE_FILE", Cmd.PersistentFlags().Lookup("STORE_FILE"))
 	viper.BindPFlag("STORE_INTERVAL", Cmd.PersistentFlags().Lookup("STORE_INTERVAL"))
 	viper.BindPFlag("RESTORE", Cmd.PersistentFlags().Lookup("RESTORE"))
+	Cmd.Execute()
 	viper.AutomaticEnv()
 
-	Cmd.Execute()
 	err = viper.Unmarshal(&config)
 	return
 }
