@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
+	"github.com/zamibaru89/devops-metrics/internal/config"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -20,6 +20,7 @@ import (
 var Cmd = &cobra.Command{}
 var listGauges = []string{"Alloc", "BuckHashSys", "Frees", "GCCPUFraction", "GCSys", "HeapAlloc", "HeapIdle", "HeapInuse", "HeapObjects", "HeapReleased", "HeapSys", "LastGC", "Lookups", "MCacheInuse", "MCacheSys", "MSpanInuse", "MSpanSys", "Mallocs", "NextGC", "NumForcedGC", "NumGC", "OtherSys", "PauseTotalNs", "StackInuse", "StackSys", "Sys", "TotalAlloc", "RandomValue"}
 var listCounters = []string{"PollCount"}
+var AgentConfig = config.AgentConfig{}
 
 var u = &url.URL{
 	Scheme: "http",
@@ -46,7 +47,7 @@ type Metrics struct {
 	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
 }
 
-func (m *MetricGauge) SendMetrics(c Config) {
+func (m *MetricGauge) SendMetrics(c config.AgentConfig) {
 
 	x := make(map[string]float64)
 	j, _ := json.Marshal(m)
@@ -62,7 +63,7 @@ func (m *MetricGauge) SendMetrics(c Config) {
 		body, _ := json.Marshal(m)
 		//u.Path = path.Join("update", "gauge", v, fmt.Sprintf("%f", value))
 		u.Path = path.Join("update")
-		u.Host = c.ADDRESS
+		u.Host = c.Address
 		sendPOST(*u, body)
 	}
 
@@ -72,7 +73,7 @@ func (m *MetricCounter) UpdateMetrics() {
 	m.PollCount++
 }
 
-func (m *MetricCounter) SendMetrics(c Config) {
+func (m *MetricCounter) SendMetrics(c config.AgentConfig) {
 
 	xc := make(map[string]int64)
 	j, _ := json.Marshal(m)
@@ -87,7 +88,7 @@ func (m *MetricCounter) SendMetrics(c Config) {
 		body, _ := json.Marshal(m)
 		//u.Path = path.Join("update", "counter", v, strconv.FormatInt(value, 10))
 		u.Path = path.Join("update")
-		u.Host = c.ADDRESS
+		u.Host = c.Address
 		sendPOST(*u, body)
 	}
 
@@ -115,40 +116,39 @@ func sendPOST(u url.URL, b []byte) {
 
 }
 
-type Config struct {
-	ADDRESS        string `mapstructure:"ADDRESS"`
-	ReportInterval string `mapstructure:"REPORT_INTERVAL"`
-	PollInterval   string `mapstructure:"POLL_INTERVAL"`
-}
-
-func LoadConfig() (config Config, err error) {
-
-	Cmd.PersistentFlags().StringVarP(&config.ReportInterval, "REPORT_INTERVAL", "r", "", "10s")
-	Cmd.PersistentFlags().StringVarP(&config.ADDRESS, "ADDRESS", "a", "", "URL:PORT")
-	Cmd.PersistentFlags().StringVarP(&config.PollInterval, "POLL_INTERVAL", "p", "", "2s")
-
-	viper.SetDefault("REPORT_INTERVAL", "10s")
-	viper.SetDefault("ADDRESS", "localhost:8080")
-	viper.SetDefault("POLL_INTERVAL", "2s")
-
-	viper.BindPFlag("REPORT_INTERVAL", Cmd.PersistentFlags().Lookup("REPORT_INTERVAL"))
-	viper.BindPFlag("ADDRESS", Cmd.PersistentFlags().Lookup("ADDRESS"))
-	viper.BindPFlag("POLL_INTERVAL", Cmd.PersistentFlags().Lookup("POLL_INTERVAL"))
-	Cmd.Execute()
-	viper.AutomaticEnv()
-
-	err = viper.Unmarshal(&config)
-	return
-}
+//type Config struct {
+//	ADDRESS        string `mapstructure:"ADDRESS"`
+//	ReportInterval string `mapstructure:"REPORT_INTERVAL"`
+//	PollInterval   string `mapstructure:"POLL_INTERVAL"`
+//}
+//
+//func LoadConfig() (config Config, err error) {
+//
+//	Cmd.PersistentFlags().StringVarP(&config.ReportInterval, "REPORT_INTERVAL", "r", "", "10s")
+//	Cmd.PersistentFlags().StringVarP(&config.ADDRESS, "ADDRESS", "a", "", "URL:PORT")
+//	Cmd.PersistentFlags().StringVarP(&config.PollInterval, "POLL_INTERVAL", "p", "", "2s")
+//
+//	viper.SetDefault("REPORT_INTERVAL", "10s")
+//	viper.SetDefault("ADDRESS", "localhost:8080")
+//	viper.SetDefault("POLL_INTERVAL", "2s")
+//
+//	viper.BindPFlag("REPORT_INTERVAL", Cmd.PersistentFlags().Lookup("REPORT_INTERVAL"))
+//	viper.BindPFlag("ADDRESS", Cmd.PersistentFlags().Lookup("ADDRESS"))
+//	viper.BindPFlag("POLL_INTERVAL", Cmd.PersistentFlags().Lookup("POLL_INTERVAL"))
+//	Cmd.Execute()
+//	viper.AutomaticEnv()
+//
+//	err = viper.Unmarshal(&config)
+//	return
+//}
 
 func main() {
 
 	var metricG MetricGauge
 	var metricC MetricCounter
-	config, _ := LoadConfig()
 
-	pullDuration, _ := time.ParseDuration(config.PollInterval)
-	reportDuration, _ := time.ParseDuration(config.ReportInterval)
+	pullDuration, _ := time.ParseDuration(AgentConfig.PollInterval)
+	reportDuration, _ := time.ParseDuration(AgentConfig.ReportInterval)
 	pullTicker := time.NewTicker(pullDuration)
 	pushTicker := time.NewTicker(reportDuration)
 	sigs := make(chan os.Signal, 4)
@@ -162,8 +162,8 @@ func main() {
 			fmt.Println("running metric.UpdateMetrics()")
 
 		case <-pushTicker.C:
-			metricG.SendMetrics(config)
-			metricC.SendMetrics(config)
+			metricG.SendMetrics(AgentConfig)
+			metricC.SendMetrics(AgentConfig)
 		case <-sigs:
 			fmt.Println("signal received")
 			pullTicker.Stop()

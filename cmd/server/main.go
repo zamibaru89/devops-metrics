@@ -6,8 +6,7 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
+	"github.com/zamibaru89/devops-metrics/internal/config"
 	"github.com/zamibaru89/devops-metrics/internal/storage"
 	"io/ioutil"
 	"log"
@@ -18,7 +17,8 @@ import (
 )
 
 var Server = storage.NewMemoryStorage()
-var Cmd = &cobra.Command{}
+
+var ServerConfig = config.ServerConfig{}
 
 func receiveMetric(w http.ResponseWriter, r *http.Request) {
 	metricType := chi.URLParam(r, "metricType")
@@ -140,36 +140,32 @@ func valueOfMetricJSON(w http.ResponseWriter, r *http.Request) {
 
 }
 
-type Config struct {
-	ADDRESS       string `mapstructure:"ADDRESS"`
-	FilePath      string `mapstructure:"STORE_FILE "`
-	StoreInterval string `mapstructure:"STORE_INTERVAL"`
-	Restore       bool   `mapstructure:"RESTORE"`
-}
+//func LoadConfig() (config Config, err error) {
+//	Cmd.PersistentFlags().StringVarP(&config.ADDRESS, "ADDRESS", "a", "", "URL:PORT")
+//	Cmd.PersistentFlags().StringVarP(&config.FilePath, "STORE_FILE", "f", "", "Save to filepath?")
+//	Cmd.PersistentFlags().StringVarP(&config.StoreInterval, "STORE_INTERVAL", "i", "", "Store interval in seconds")
+//	Cmd.PersistentFlags().BoolVarP(&config.Restore, "RESTORE", "r", true, "Restore from File true/false")
+//
+//	viper.SetDefault("ADDRESS", ":8080")
+//	viper.SetDefault("STORE_FILE ", "C:\\temp\\1.json")
+//	viper.SetDefault("STORE_FILE ", "/tmp/devops-metrics-db.json")
+//	viper.SetDefault("STORE_INTERVAL", "300s")
+//	viper.SetDefault("RESTORE", true)
+//
+//	viper.BindPFlag("ADDRESS", Cmd.PersistentFlags().Lookup("ADDRESS"))
+//	viper.BindPFlag("STORE_FILE", Cmd.PersistentFlags().Lookup("STORE_FILE"))
+//	viper.BindPFlag("STORE_INTERVAL", Cmd.PersistentFlags().Lookup("STORE_INTERVAL"))
+//	viper.BindPFlag("RESTORE", Cmd.PersistentFlags().Lookup("RESTORE"))
+//
+//	viper.BindEnv("STORE_INTERVAL")
+//	Cmd.Execute()
+//	viper.AutomaticEnv()
+//
+//	err = viper.Unmarshal(&config)
+//	return
+//}
 
-func LoadConfig() (config Config, err error) {
-	Cmd.PersistentFlags().StringVarP(&config.ADDRESS, "ADDRESS", "a", "", "URL:PORT")
-	Cmd.PersistentFlags().StringVarP(&config.FilePath, "STORE_FILE", "f", "", "Save to filepath?")
-	Cmd.PersistentFlags().StringVarP(&config.StoreInterval, "STORE_INTERVAL", "i", "", "Store interval in seconds")
-	Cmd.PersistentFlags().BoolVarP(&config.Restore, "RESTORE", "r", true, "Restore from File true/false")
-
-	viper.SetDefault("ADDRESS", ":8080")
-	viper.SetDefault("STORE_FILE ", "/tmp/devops-metrics-db.json")
-	viper.SetDefault("STORE_INTERVAL", "300s")
-	viper.SetDefault("RESTORE", true)
-
-	viper.BindPFlag("ADDRESS", Cmd.PersistentFlags().Lookup("ADDRESS"))
-	viper.BindPFlag("STORE_FILE", Cmd.PersistentFlags().Lookup("STORE_FILE"))
-	viper.BindPFlag("STORE_INTERVAL", Cmd.PersistentFlags().Lookup("STORE_INTERVAL"))
-	viper.BindPFlag("RESTORE", Cmd.PersistentFlags().Lookup("RESTORE"))
-	Cmd.Execute()
-	viper.AutomaticEnv()
-
-	err = viper.Unmarshal(&config)
-	return
-}
-
-func SaveMetricToDisk(config Config, m storage.Repo) {
+func SaveMetricToDisk(config config.ServerConfig, m storage.Repo) {
 
 	filePath := config.FilePath
 	fileBits := os.O_WRONLY | os.O_CREATE | os.O_TRUNC
@@ -193,7 +189,7 @@ func SaveMetricToDisk(config Config, m storage.Repo) {
 
 }
 
-func RestoreMetricsFromDisk(config Config, r storage.Repo) storage.Repo {
+func RestoreMetricsFromDisk(config config.ServerConfig, r storage.Repo) storage.Repo {
 	repo := r
 	path := config.FilePath
 
@@ -217,17 +213,18 @@ func RestoreMetricsFromDisk(config Config, r storage.Repo) storage.Repo {
 }
 
 func main() {
-	config, _ := LoadConfig()
-	storeDuration, _ := time.ParseDuration(config.StoreInterval)
+
+	storeDuration, _ := time.ParseDuration(ServerConfig.StoreInterval)
 	storeTicker := time.NewTicker(storeDuration)
-	if config.Restore == true {
-		RestoreMetricsFromDisk(config, Server)
+	if ServerConfig.Restore == true {
+		RestoreMetricsFromDisk(ServerConfig, Server)
 	}
+
 	go func() {
 		for {
 			select {
 			case <-storeTicker.C:
-				SaveMetricToDisk(config, Server)
+				SaveMetricToDisk(ServerConfig, Server)
 				fmt.Println("Save to disk")
 			}
 		}
@@ -243,5 +240,5 @@ func main() {
 		r.Post("/", valueOfMetricJSON)
 		r.Get("/{metricType}/{metricName}", valueOfMetric)
 	})
-	http.ListenAndServe(config.ADDRESS, r)
+	http.ListenAndServe(ServerConfig.Address, r)
 }
