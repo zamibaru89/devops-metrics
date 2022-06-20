@@ -33,6 +33,10 @@ func receiveMetric(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		Server.AddGaugeMetric(metricName, Value)
+		if ServerConfig.StoreInterval == "0" {
+			SaveMetricToDisk(ServerConfig, Server)
+		}
+
 	} else if metricType == "counter" {
 
 		Value, err := strconv.ParseInt(metricValue, 0, 64)
@@ -42,6 +46,9 @@ func receiveMetric(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		Server.AddCounterMetric(metricName, Value)
+		if ServerConfig.StoreInterval == "0" {
+			SaveMetricToDisk(ServerConfig, Server)
+		}
 
 	} else {
 		w.WriteHeader(501)
@@ -81,6 +88,8 @@ func listMetrics(w http.ResponseWriter, r *http.Request) {
 
 func receiveMetricJSON(w http.ResponseWriter, r *http.Request) {
 	var m storage.Metric
+	//ServerConfig.Parse()
+
 	err := json.NewDecoder(r.Body).Decode(&m)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
@@ -96,6 +105,11 @@ func receiveMetricJSON(w http.ResponseWriter, r *http.Request) {
 			Server.AddGaugeMetric(m.ID, *m.Value)
 			w.Header().Set("Content-Type", "application/json")
 			render.JSON(w, r, m)
+			if ServerConfig.StoreInterval == "0" {
+				SaveMetricToDisk(ServerConfig, Server)
+
+				log.Println(m)
+			}
 		}
 	} else if m.MType == "counter" {
 		if m.Delta == nil {
@@ -107,6 +121,10 @@ func receiveMetricJSON(w http.ResponseWriter, r *http.Request) {
 			Server.AddCounterMetric(m.ID, *m.Delta)
 			w.Header().Set("Content-Type", "application/json")
 			render.JSON(w, r, m)
+			if ServerConfig.StoreInterval == "0" {
+				SaveMetricToDisk(ServerConfig, Server)
+				log.Println(m)
+			}
 		}
 	} else {
 		w.Header().Set("Content-Type", "application/json")
@@ -214,21 +232,23 @@ func RestoreMetricsFromDisk(config config.ServerConfig, r storage.Repo) storage.
 
 func main() {
 	ServerConfig.Parse()
-	storeDuration, _ := time.ParseDuration(ServerConfig.StoreInterval)
-	storeTicker := time.NewTicker(storeDuration)
-	if ServerConfig.Restore == true {
-		RestoreMetricsFromDisk(ServerConfig, Server)
-	}
-
-	go func() {
-		for {
-			select {
-			case <-storeTicker.C:
-				SaveMetricToDisk(ServerConfig, Server)
-				fmt.Println("Save to disk")
-			}
+	if ServerConfig.StoreInterval != "0" {
+		storeDuration, _ := time.ParseDuration(ServerConfig.StoreInterval)
+		storeTicker := time.NewTicker(storeDuration)
+		if ServerConfig.Restore == true {
+			RestoreMetricsFromDisk(ServerConfig, Server)
 		}
-	}()
+
+		go func() {
+			for {
+				select {
+				case <-storeTicker.C:
+					SaveMetricToDisk(ServerConfig, Server)
+					fmt.Println("Save to disk")
+				}
+			}
+		}()
+	}
 	r := chi.NewRouter()
 	r.Use(middleware.Compress(5))
 	r.Get("/", listMetrics)
