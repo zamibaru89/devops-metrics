@@ -139,7 +139,7 @@ func LoadConfig() (config Config, err error) {
 	Cmd.PersistentFlags().BoolVarP(&config.Restore, "RESTORE", "r", true, "Restore from File true/false")
 
 	viper.SetDefault("ADDRESS", ":8080")
-	viper.SetDefault("STORE_FILE ", "C:\\temp\\metrics.json")
+	viper.SetDefault("STORE_FILE ", "/tmp/devops-metrics-db.json")
 	viper.SetDefault("STORE_INTERVAL", "300s")
 	viper.SetDefault("RESTORE", true)
 
