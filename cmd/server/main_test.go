@@ -12,8 +12,7 @@ func Test_receiveMetric(t *testing.T) {
 		code int
 		path string
 	}
-	GaugeMetric.metric = make(map[string]float64)
-	CounterMetric.metric = make(map[string]int64)
+
 	tests := []struct {
 		name string
 		want want
