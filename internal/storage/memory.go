@@ -22,14 +22,18 @@ func (m *MemoryStorage) AddCounterMetric(name string, value int64) {
 	if len(m.CounterMetric) == 0 {
 		m.CounterMetric = make(map[string]int64)
 	}
+	m.CounterMutex.Lock()
 	m.CounterMetric[name] += value
+	m.CounterMutex.Unlock()
 }
 
 func (m *MemoryStorage) AddGaugeMetric(name string, value float64) {
 	if len(m.GaugeMetric) == 0 {
 		m.GaugeMetric = make(map[string]float64)
 	}
+	m.GaugeMutex.Lock()
 	m.GaugeMetric[name] = value
+	m.GaugeMutex.Unlock()
 }
 
 func (m *MemoryStorage) GetGauge(metricName string) (float64, error) {
