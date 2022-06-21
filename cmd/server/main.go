@@ -235,17 +235,16 @@ func main() {
 	if ServerConfig.StoreInterval != "0" {
 		storeDuration, _ := time.ParseDuration(ServerConfig.StoreInterval)
 		storeTicker := time.NewTicker(storeDuration)
-		if ServerConfig.Restore == true {
+		if ServerConfig.Restore {
 			RestoreMetricsFromDisk(ServerConfig, Server)
 		}
 
 		go func() {
 			for {
-				select {
-				case <-storeTicker.C:
-					SaveMetricToDisk(ServerConfig, Server)
-					fmt.Println("Save to disk")
-				}
+
+				<-storeTicker.C
+				SaveMetricToDisk(ServerConfig, Server)
+
 			}
 		}()
 	}
