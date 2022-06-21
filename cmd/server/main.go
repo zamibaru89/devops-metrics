@@ -81,7 +81,7 @@ func valueOfMetric(w http.ResponseWriter, r *http.Request) {
 
 }
 func listMetrics(w http.ResponseWriter, r *http.Request) {
-	json, _ := json.Marshal(Server.AsJson())
+	json, _ := json.Marshal(Server.AsJSON())
 	w.Header().Set("Content-Type", "text/html")
 	fmt.Fprintln(w, string(json))
 }
@@ -193,7 +193,7 @@ func SaveMetricToDisk(config config.ServerConfig, m storage.Repo) {
 		log.Fatal(err)
 	}
 
-	data, err := json.Marshal(m.AsJson())
+	data, err := json.Marshal(m.AsJSON())
 	if err != nil {
 		log.Fatal(err)
 	}
