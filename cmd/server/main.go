@@ -23,7 +23,6 @@ import (
 )
 
 var Server = storage.NewMemoryStorage()
-
 var ServerConfig = config.ServerConfig{}
 
 func receiveMetric(w http.ResponseWriter, r *http.Request) {
