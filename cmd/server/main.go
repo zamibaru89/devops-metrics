@@ -267,7 +267,7 @@ func main() {
 		}()
 	}
 	r := chi.NewRouter()
-
+	r.Use(middleware.GzipHandle)
 	r.Get("/", listMetrics)
 	r.Route("/update", func(r chi.Router) {
 		r.Post("/", receiveMetricJSON)
@@ -277,5 +277,5 @@ func main() {
 		r.Post("/", valueOfMetricJSON)
 		r.Get("/{metricType}/{metricName}", valueOfMetric)
 	})
-	http.ListenAndServe(ServerConfig.Address, middleware.GzipHandle(r))
+	http.ListenAndServe(ServerConfig.Address, r)
 }
