@@ -118,7 +118,7 @@ func sendPOST(u url.URL, b []byte) {
 	}
 
 	res, err := client.Do(req)
-	log.Println(req, res)
+
 	if err != nil {
 		log.Println(err)
 		return
