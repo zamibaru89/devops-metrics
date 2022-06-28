@@ -210,7 +210,7 @@ func SaveMetricToDisk(config config.ServerConfig, m storage.Repo) error {
 	}
 
 	file.Close()
-
+	return nil
 }
 
 func RestoreMetricsFromDisk(config config.ServerConfig, r storage.Repo) storage.Repo {
