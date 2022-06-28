@@ -74,15 +74,13 @@ func valueOfMetric(w http.ResponseWriter, r *http.Request) {
 	switch metricType {
 	case "gauge":
 		value, err := Server.GetGauge(metricName)
-		fmt.Println(value, err)
 		if err != nil {
 			fmt.Println(value, err)
 			w.WriteHeader(http.StatusNotFound)
 
 		}
 		w.Header().Set("Content-Type", "text/html")
-		fmt.Println("te", w)
-
+		fmt.Fprintln(w, value)
 	case "counter":
 		value, err := Server.GetCounter(metricName)
 		if err != nil {
@@ -92,6 +90,9 @@ func valueOfMetric(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Header().Set("Content-Type", "text/html")
 		fmt.Fprintln(w, value)
+	default:
+		w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(http.StatusBadRequest)
 	}
 
 }
