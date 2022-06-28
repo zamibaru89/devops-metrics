@@ -57,6 +57,7 @@ func (m *MemoryStorage) GetCounter(metricName string) (int64, error) {
 
 func (m *MemoryStorage) AsMetric() MetricStorage {
 	var metrics MetricStorage
+	m.GaugeMutex.Lock()
 	for id, value := range m.GaugeMetric {
 		value := value
 		metrics.Metrics = append(metrics.Metrics, Metric{
@@ -65,6 +66,8 @@ func (m *MemoryStorage) AsMetric() MetricStorage {
 			Value: &value,
 		})
 	}
+	m.GaugeMutex.Unlock()
+	m.CounterMutex.Lock()
 	for id, delta := range m.CounterMetric {
 		delta := delta
 		metrics.Metrics = append(metrics.Metrics, Metric{
@@ -73,6 +76,7 @@ func (m *MemoryStorage) AsMetric() MetricStorage {
 			Delta: &delta,
 		})
 	}
+	m.CounterMutex.Unlock()
 
 	return metrics
 }
