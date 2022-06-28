@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/spf13/cobra"
 	"github.com/zamibaru89/devops-metrics/internal/config"
 	"log"
 	"math/rand"
@@ -18,7 +17,6 @@ import (
 	"time"
 )
 
-var Cmd = &cobra.Command{}
 var listGauges = []string{"Alloc", "BuckHashSys", "Frees", "GCCPUFraction", "GCSys", "HeapAlloc", "HeapIdle", "HeapInuse", "HeapObjects", "HeapReleased", "HeapSys", "LastGC", "Lookups", "MCacheInuse", "MCacheSys", "MSpanInuse", "MSpanSys", "Mallocs", "NextGC", "NumForcedGC", "NumGC", "OtherSys", "PauseTotalNs", "StackInuse", "StackSys", "Sys", "TotalAlloc", "RandomValue"}
 var listCounters = []string{"PollCount"}
 var AgentConfig = config.AgentConfig{}
@@ -85,7 +83,11 @@ func (m *MetricCounter) UpdateMetrics() {
 func (m *MetricCounter) SendMetrics(c config.AgentConfig) {
 
 	xc := make(map[string]int64)
-	j, _ := json.Marshal(m)
+	j, err := json.Marshal(m)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 	json.Unmarshal(j, &xc)
 
 	for _, v := range listCounters {
@@ -130,10 +132,8 @@ func main() {
 	var metricG MetricGauge
 	var metricC MetricCounter
 	AgentConfig.Parse()
-	pullDuration, _ := time.ParseDuration(AgentConfig.PollInterval)
-	reportDuration, _ := time.ParseDuration(AgentConfig.ReportInterval)
-	pullTicker := time.NewTicker(pullDuration)
-	pushTicker := time.NewTicker(reportDuration)
+	pullTicker := time.NewTicker(AgentConfig.PollInterval)
+	pushTicker := time.NewTicker(AgentConfig.ReportInterval)
 	sigs := make(chan os.Signal, 4)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT)
 

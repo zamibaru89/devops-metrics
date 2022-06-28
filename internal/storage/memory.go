@@ -19,19 +19,21 @@ func NewMemoryStorage() Repo {
 	}
 }
 func (m *MemoryStorage) AddCounterMetric(name string, value int64) {
+	m.CounterMutex.Lock()
 	if len(m.CounterMetric) == 0 {
 		m.CounterMetric = make(map[string]int64)
 	}
-	m.CounterMutex.Lock()
+
 	m.CounterMetric[name] += value
 	m.CounterMutex.Unlock()
 }
 
 func (m *MemoryStorage) AddGaugeMetric(name string, value float64) {
+	m.GaugeMutex.Lock()
 	if len(m.GaugeMetric) == 0 {
 		m.GaugeMetric = make(map[string]float64)
 	}
-	m.GaugeMutex.Lock()
+
 	m.GaugeMetric[name] = value
 	m.GaugeMutex.Unlock()
 }
@@ -53,7 +55,7 @@ func (m *MemoryStorage) GetCounter(metricName string) (int64, error) {
 	return 0, errors.New("not Found")
 }
 
-func (m *MemoryStorage) AsJSON() MetricStorage {
+func (m *MemoryStorage) AsMetric() MetricStorage {
 	var metrics MetricStorage
 	for id, value := range m.GaugeMetric {
 		value := value

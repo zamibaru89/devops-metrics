@@ -1,12 +1,18 @@
+//TODO:
+//Обсудить на 1 на 1 как реализовать
+//1) Фикс дупликацию с хендлером и вынос бизнес логики
+//2) Реализация апи клиента
+//3) config.GetAgentConfig() и варианты реализации
+
 package main
 
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/zamibaru89/devops-metrics/internal/config"
+	"github.com/zamibaru89/devops-metrics/internal/middleware"
 	"github.com/zamibaru89/devops-metrics/internal/storage"
 	"io/ioutil"
 	"log"
@@ -33,8 +39,11 @@ func receiveMetric(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		Server.AddGaugeMetric(metricName, Value)
-		if ServerConfig.StoreInterval == "0" {
-			SaveMetricToDisk(ServerConfig, Server)
+		if ServerConfig.StoreInterval == 0 {
+			err := SaveMetricToDisk(ServerConfig, Server)
+			if err != nil {
+				return
+			}
 		}
 
 	} else if metricType == "counter" {
@@ -46,8 +55,11 @@ func receiveMetric(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		Server.AddCounterMetric(metricName, Value)
-		if ServerConfig.StoreInterval == "0" {
-			SaveMetricToDisk(ServerConfig, Server)
+		if ServerConfig.StoreInterval == 0 {
+			err := SaveMetricToDisk(ServerConfig, Server)
+			if err != nil {
+				return
+			}
 		}
 
 	} else {
@@ -84,7 +96,7 @@ func valueOfMetric(w http.ResponseWriter, r *http.Request) {
 
 }
 func listMetrics(w http.ResponseWriter, r *http.Request) {
-	json, err := json.Marshal(Server.AsJSON())
+	json, err := json.Marshal(Server.AsMetric())
 	if err != nil {
 		log.Println(err)
 		return
@@ -112,7 +124,7 @@ func receiveMetricJSON(w http.ResponseWriter, r *http.Request) {
 			Server.AddGaugeMetric(m.ID, *m.Value)
 			w.Header().Set("Content-Type", "application/json")
 			render.JSON(w, r, m)
-			if ServerConfig.StoreInterval == "0" {
+			if ServerConfig.StoreInterval == 0 {
 				SaveMetricToDisk(ServerConfig, Server)
 				log.Println(m)
 			}
@@ -127,7 +139,7 @@ func receiveMetricJSON(w http.ResponseWriter, r *http.Request) {
 			Server.AddCounterMetric(m.ID, *m.Delta)
 			w.Header().Set("Content-Type", "application/json")
 			render.JSON(w, r, m)
-			if ServerConfig.StoreInterval == "0" {
+			if ServerConfig.StoreInterval == 0 {
 				SaveMetricToDisk(ServerConfig, Server)
 				log.Println(m)
 			}
@@ -173,24 +185,29 @@ func valueOfMetricJSON(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func SaveMetricToDisk(config config.ServerConfig, m storage.Repo) {
+func SaveMetricToDisk(config config.ServerConfig, m storage.Repo) error {
 
 	filePath := config.FilePath
 	fileBits := os.O_WRONLY | os.O_CREATE | os.O_TRUNC
 
 	file, err := os.OpenFile(filePath, fileBits, 0600)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		file.Close()
+		return err
 	}
 
-	data, err := json.Marshal(m.AsJSON())
+	data, err := json.Marshal(m.AsMetric())
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		file.Close()
+		return err
 	}
 
 	_, err = file.Write(data)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		file.Close()
 	}
 
 	file.Close()
@@ -226,9 +243,9 @@ func RestoreMetricsFromDisk(config config.ServerConfig, r storage.Repo) storage.
 
 func main() {
 	ServerConfig.Parse()
-	if ServerConfig.StoreInterval != "0" {
-		storeDuration, _ := time.ParseDuration(ServerConfig.StoreInterval)
-		storeTicker := time.NewTicker(storeDuration)
+	if ServerConfig.StoreInterval != 0 {
+
+		storeTicker := time.NewTicker(ServerConfig.StoreInterval)
 		if ServerConfig.Restore {
 			RestoreMetricsFromDisk(ServerConfig, Server)
 		}
@@ -237,13 +254,16 @@ func main() {
 			for {
 
 				<-storeTicker.C
-				SaveMetricToDisk(ServerConfig, Server)
+				err := SaveMetricToDisk(ServerConfig, Server)
+				if err != nil {
+					return
+				}
 
 			}
 		}()
 	}
 	r := chi.NewRouter()
-	r.Use(middleware.Compress(5))
+
 	r.Get("/", listMetrics)
 	r.Route("/update", func(r chi.Router) {
 		r.Post("/", receiveMetricJSON)
@@ -253,5 +273,5 @@ func main() {
 		r.Post("/", valueOfMetricJSON)
 		r.Get("/{metricType}/{metricName}", valueOfMetric)
 	})
-	http.ListenAndServe(ServerConfig.Address, r)
+	http.ListenAndServe(ServerConfig.Address, middleware.GzipHandle(r))
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/go-chi/chi/v5"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -65,10 +66,17 @@ func Test_receiveMetric(t *testing.T) {
 			// проверяем код ответа
 			testLink := ts.URL + tt.want.path
 
-			req, _ := http.NewRequest(http.MethodPost, testLink, nil)
+			req, err := http.NewRequest(http.MethodPost, testLink, nil)
+			if err != nil {
+				log.Println(err)
+				return
+			}
 			req.Header.Set("Content-Type", "Content-Type: text/plain")
-			res, _ := http.DefaultClient.Do(req)
-
+			res, err := http.DefaultClient.Do(req)
+			if err != nil {
+				log.Println(err)
+				return
+			}
 			if res.StatusCode != tt.want.code {
 				t.Errorf("Expected status code %d, got %d", tt.want.code, res.StatusCode)
 
@@ -108,9 +116,17 @@ func Test_listMetrics(t *testing.T) {
 			// проверяем код ответа
 			testLink := ts.URL + tt.want.path
 
-			req, _ := http.NewRequest(http.MethodGet, testLink, nil)
+			req, err := http.NewRequest(http.MethodGet, testLink, nil)
+			if err != nil {
+				log.Println(err)
+				return
+			}
 			req.Header.Set("Content-Type", "Content-Type: text/plain")
-			res, _ := http.DefaultClient.Do(req)
+			res, err := http.DefaultClient.Do(req)
+			if err != nil {
+				log.Println(err)
+				return
+			}
 
 			if res.StatusCode != tt.want.code {
 				t.Errorf("Expected status code %d, got %d", tt.want.code, res.StatusCode)

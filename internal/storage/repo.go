@@ -5,7 +5,7 @@ type Repo interface {
 	AddGaugeMetric(string, float64)
 	GetCounter(string) (int64, error)
 	GetGauge(string) (float64, error)
-	AsJSON() MetricStorage
+	AsMetric() MetricStorage
 }
 
 type Metric struct {
