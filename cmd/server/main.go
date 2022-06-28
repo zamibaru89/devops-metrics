@@ -60,7 +60,9 @@ func valueOfMetric(w http.ResponseWriter, r *http.Request) {
 
 	metricName := chi.URLParam(r, "metricName")
 	metricType := chi.URLParam(r, "metricType")
-	if metricType == "gauge" {
+
+	switch metricType {
+	case "gauge":
 		value, err := Server.GetGauge(metricName)
 		if err != nil {
 			w.WriteHeader(http.StatusNotFound)
@@ -68,7 +70,8 @@ func valueOfMetric(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Header().Set("Content-Type", "text/html")
 		fmt.Fprintln(w, value)
-	} else if metricType == "counter" {
+
+	case "counter":
 		value, err := Server.GetCounter(metricName)
 		if err != nil {
 			w.Header().Set("Content-Type", "text/html")
@@ -81,15 +84,17 @@ func valueOfMetric(w http.ResponseWriter, r *http.Request) {
 
 }
 func listMetrics(w http.ResponseWriter, r *http.Request) {
-	json, _ := json.Marshal(Server.AsJSON())
+	json, err := json.Marshal(Server.AsJSON())
+	if err != nil {
+		log.Println(err)
+		return
+	}
 	w.Header().Set("Content-Type", "text/html")
 	fmt.Fprintln(w, string(json))
 }
 
 func receiveMetricJSON(w http.ResponseWriter, r *http.Request) {
 	var m storage.Metric
-	//ServerConfig.Parse()
-
 	err := json.NewDecoder(r.Body).Decode(&m)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
@@ -97,7 +102,9 @@ func receiveMetricJSON(w http.ResponseWriter, r *http.Request) {
 		render.JSON(w, r, m)
 		return
 	}
-	if m.MType == "gauge" {
+
+	switch m.MType {
+	case "gauge":
 		if m.Value == nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
@@ -107,11 +114,10 @@ func receiveMetricJSON(w http.ResponseWriter, r *http.Request) {
 			render.JSON(w, r, m)
 			if ServerConfig.StoreInterval == "0" {
 				SaveMetricToDisk(ServerConfig, Server)
-
 				log.Println(m)
 			}
 		}
-	} else if m.MType == "counter" {
+	case "counter":
 		if m.Delta == nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
@@ -126,7 +132,7 @@ func receiveMetricJSON(w http.ResponseWriter, r *http.Request) {
 				log.Println(m)
 			}
 		}
-	} else {
+	default:
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
 	}
@@ -141,47 +147,31 @@ func valueOfMetricJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if m.MType == "counter" {
-		value, _ := Server.GetCounter(m.ID)
+	switch m.MType {
+	case "counter":
+		value, err := Server.GetCounter(m.ID)
+		if err != nil {
+			log.Println(err)
+			return
+		}
 		m.Delta = &value
 		w.Header().Set("Content-Type", "application/json")
 		render.JSON(w, r, m)
-	} else if m.MType == "gauge" {
-		value, _ := Server.GetGauge(m.ID)
+	case "gauge":
+		value, err := Server.GetGauge(m.ID)
+		if err != nil {
+			log.Println(err)
+			return
+		}
 		m.Value = &value
 		w.Header().Set("Content-Type", "application/json")
 		render.JSON(w, r, m)
-	} else {
+	default:
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
 	}
 
 }
-
-//func LoadConfig() (config Config, err error) {
-//	Cmd.PersistentFlags().StringVarP(&config.ADDRESS, "ADDRESS", "a", "", "URL:PORT")
-//	Cmd.PersistentFlags().StringVarP(&config.FilePath, "STORE_FILE", "f", "", "Save to filepath?")
-//	Cmd.PersistentFlags().StringVarP(&config.StoreInterval, "STORE_INTERVAL", "i", "", "Store interval in seconds")
-//	Cmd.PersistentFlags().BoolVarP(&config.Restore, "RESTORE", "r", true, "Restore from File true/false")
-//
-//	viper.SetDefault("ADDRESS", ":8080")
-//	viper.SetDefault("STORE_FILE ", "C:\\temp\\1.json")
-//	viper.SetDefault("STORE_FILE ", "/tmp/devops-metrics-db.json")
-//	viper.SetDefault("STORE_INTERVAL", "300s")
-//	viper.SetDefault("RESTORE", true)
-//
-//	viper.BindPFlag("ADDRESS", Cmd.PersistentFlags().Lookup("ADDRESS"))
-//	viper.BindPFlag("STORE_FILE", Cmd.PersistentFlags().Lookup("STORE_FILE"))
-//	viper.BindPFlag("STORE_INTERVAL", Cmd.PersistentFlags().Lookup("STORE_INTERVAL"))
-//	viper.BindPFlag("RESTORE", Cmd.PersistentFlags().Lookup("RESTORE"))
-//
-//	viper.BindEnv("STORE_INTERVAL")
-//	Cmd.Execute()
-//	viper.AutomaticEnv()
-//
-//	err = viper.Unmarshal(&config)
-//	return
-//}
 
 func SaveMetricToDisk(config config.ServerConfig, m storage.Repo) {
 
@@ -211,7 +201,11 @@ func RestoreMetricsFromDisk(config config.ServerConfig, r storage.Repo) storage.
 	repo := r
 	path := config.FilePath
 
-	data, _ := ioutil.ReadFile(path)
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		log.Println(err)
+
+	}
 
 	metrics := storage.MetricStorage{}
 	json.Unmarshal(data, &metrics)
