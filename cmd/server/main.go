@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/zamibaru89/devops-metrics/internal/config"
+	"github.com/zamibaru89/devops-metrics/internal/middleware"
 	"github.com/zamibaru89/devops-metrics/internal/storage"
 	"io/ioutil"
 	"log"
@@ -276,5 +277,5 @@ func main() {
 		r.Post("/", valueOfMetricJSON)
 		r.Get("/{metricType}/{metricName}", valueOfMetric)
 	})
-	http.ListenAndServe(ServerConfig.Address, r)
+	http.ListenAndServe(ServerConfig.Address, middleware.GzipHandle(r))
 }
