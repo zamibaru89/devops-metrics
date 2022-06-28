@@ -74,12 +74,14 @@ func valueOfMetric(w http.ResponseWriter, r *http.Request) {
 	switch metricType {
 	case "gauge":
 		value, err := Server.GetGauge(metricName)
+		fmt.Println(value, err)
 		if err != nil {
+			fmt.Println(value, err)
 			w.WriteHeader(http.StatusNotFound)
 
 		}
 		w.Header().Set("Content-Type", "text/html")
-		fmt.Fprintln(w, value)
+		fmt.Println("te", w)
 
 	case "counter":
 		value, err := Server.GetCounter(metricName)
@@ -162,6 +164,7 @@ func valueOfMetricJSON(w http.ResponseWriter, r *http.Request) {
 		value, err := Server.GetCounter(m.ID)
 		if err != nil {
 			log.Println(err)
+			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 		m.Delta = &value
@@ -171,6 +174,7 @@ func valueOfMetricJSON(w http.ResponseWriter, r *http.Request) {
 		value, err := Server.GetGauge(m.ID)
 		if err != nil {
 			log.Println(err)
+			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 		m.Value = &value

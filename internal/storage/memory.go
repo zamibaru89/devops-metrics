@@ -43,7 +43,7 @@ func (m *MemoryStorage) GetGauge(metricName string) (float64, error) {
 	if value, ok := m.GaugeMetric[metricName]; ok {
 		return value, nil
 	}
-	return 0, errors.New("not found")
+	return 0, errors.New("not Found")
 
 }
 
