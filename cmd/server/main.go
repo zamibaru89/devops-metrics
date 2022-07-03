@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/zamibaru89/devops-metrics/internal/config"
+	"github.com/zamibaru89/devops-metrics/internal/functions"
 	"github.com/zamibaru89/devops-metrics/internal/middleware"
 	"github.com/zamibaru89/devops-metrics/internal/storage"
 	"io/ioutil"
@@ -173,6 +174,12 @@ func valueOfMetricJSON(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		m.Delta = &value
+		message := fmt.Sprintf("%s:counter:%d", m.ID, value)
+		if ServerConfig.Key != "" {
+			m.Hash = functions.CreateHash(message, []byte(ServerConfig.Key))
+		} else {
+			m.Hash = ""
+		}
 		w.Header().Set("Content-Type", "application/json")
 		render.JSON(w, r, m)
 	case "gauge":
@@ -183,6 +190,12 @@ func valueOfMetricJSON(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		m.Value = &value
+		message := fmt.Sprintf("%s:gauge:%f", m.ID, value)
+		if ServerConfig.Key != "" {
+			m.Hash = functions.CreateHash(message, []byte(ServerConfig.Key))
+		} else {
+			m.Hash = ""
+		}
 		w.Header().Set("Content-Type", "application/json")
 		render.JSON(w, r, m)
 	default:
@@ -278,7 +291,7 @@ func main() {
 		r.Post("/", receiveMetricJSON)
 		r.Post("/{metricType}/{metricName}/{metricValue}", receiveMetric)
 	})
-	r.With(middleware.CheckHash(ServerConfig)).Route("/value", func(r chi.Router) {
+	r.Route("/value", func(r chi.Router) {
 		r.Post("/", valueOfMetricJSON)
 		r.Get("/{metricType}/{metricName}", valueOfMetric)
 	})
