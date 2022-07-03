@@ -279,7 +279,7 @@ func PingDB(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	ServerConfig.Parse()
-	if ServerConfig.StoreInterval != 0 && ServerConfig.DSN == "" {
+	if ServerConfig.StoreInterval != 0 {
 
 		storeTicker := time.NewTicker(ServerConfig.StoreInterval)
 		if ServerConfig.Restore {
