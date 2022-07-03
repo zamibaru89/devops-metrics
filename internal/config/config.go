@@ -19,6 +19,7 @@ type ServerConfig struct {
 	FilePath      string        `env:"STORE_FILE"`
 	Restore       bool          `env:"RESTORE"`
 	Key           string        `env:"KEY"`
+	DSN           string        `env:"DATABASE_DSN"`
 }
 
 func (c *AgentConfig) Parse() error {
@@ -37,6 +38,7 @@ func (c *ServerConfig) Parse() error {
 	flag.StringVar(&c.FilePath, "f", "/tmp/devops-metrics-db.json", "")
 	flag.BoolVar(&c.Restore, "r", true, "")
 	flag.StringVar(&c.Key, "k", "", "")
+	flag.StringVar(&c.DSN, "d", "", "")
 	flag.Parse()
 
 	err := env.Parse(c)

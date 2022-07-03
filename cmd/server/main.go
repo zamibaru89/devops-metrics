@@ -7,10 +7,12 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/jackc/pgx/v4"
 	"github.com/zamibaru89/devops-metrics/internal/config"
 	"github.com/zamibaru89/devops-metrics/internal/functions"
 	"github.com/zamibaru89/devops-metrics/internal/middleware"
@@ -261,9 +263,23 @@ func RestoreMetricsFromDisk(config config.ServerConfig, r storage.Repo) storage.
 	return r
 }
 
+func PingDB(w http.ResponseWriter, r *http.Request) {
+
+	if ServerConfig.DSN == "" {
+		w.WriteHeader(http.StatusNotAcceptable)
+	}
+
+	conn, err := pgx.Connect(context.Background(), ServerConfig.DSN)
+	if err != nil {
+		log.Printf("Unable to connect to DB: %v\n\n", err)
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+	defer conn.Close(context.Background())
+}
+
 func main() {
 	ServerConfig.Parse()
-	if ServerConfig.StoreInterval != 0 {
+	if ServerConfig.StoreInterval != 0 && ServerConfig.DSN == "" {
 
 		storeTicker := time.NewTicker(ServerConfig.StoreInterval)
 		if ServerConfig.Restore {
@@ -286,6 +302,7 @@ func main() {
 	r.Use(middleware.GzipHandle)
 	//r.Use(middleware.CheckHash(ServerConfig))
 	r.Get("/", listMetrics)
+	r.Get("/ping", PingDB)
 
 	r.With(middleware.CheckHash(ServerConfig)).Route("/update", func(r chi.Router) {
 		r.Post("/", receiveMetricJSON)
