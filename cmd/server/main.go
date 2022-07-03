@@ -114,6 +114,7 @@ func receiveMetricJSON(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
 		render.JSON(w, r, m)
+
 		return
 	}
 
@@ -128,7 +129,7 @@ func receiveMetricJSON(w http.ResponseWriter, r *http.Request) {
 			render.JSON(w, r, m)
 			if ServerConfig.StoreInterval == 0 {
 				SaveMetricToDisk(ServerConfig, Server)
-				log.Println(m)
+
 			}
 		}
 	case "counter":
@@ -137,13 +138,15 @@ func receiveMetricJSON(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 
 			render.JSON(w, r, m)
+
 		} else {
 			Server.AddCounterMetric(m.ID, *m.Delta)
 			w.Header().Set("Content-Type", "application/json")
 			render.JSON(w, r, m)
+
 			if ServerConfig.StoreInterval == 0 {
 				SaveMetricToDisk(ServerConfig, Server)
-				log.Println(m)
+
 			}
 		}
 	default:
@@ -275,7 +278,7 @@ func main() {
 		r.Post("/", receiveMetricJSON)
 		r.Post("/{metricType}/{metricName}/{metricValue}", receiveMetric)
 	})
-	r.Route("/value", func(r chi.Router) {
+	r.With(middleware.CheckHash(ServerConfig)).Route("/value", func(r chi.Router) {
 		r.Post("/", valueOfMetricJSON)
 		r.Get("/{metricType}/{metricName}", valueOfMetric)
 	})

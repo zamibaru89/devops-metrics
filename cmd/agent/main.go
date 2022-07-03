@@ -161,7 +161,7 @@ func main() {
 
 		case <-pushTicker.C:
 
-			metricG.SendMetrics(AgentConfig)
+			//metricG.SendMetrics(AgentConfig)
 			metricC.SendMetrics(AgentConfig)
 		case <-sigs:
 			log.Println("signal received")
