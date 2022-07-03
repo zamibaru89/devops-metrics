@@ -68,7 +68,7 @@ func (m *MetricGauge) SendMetrics(c config.AgentConfig) {
 		m.Value = &value
 		m.Hash = ""
 		if c.Key != "" {
-			msg := fmt.Sprintf("%s:gauge:%f", m.ID, m.Value)
+			msg := fmt.Sprintf("%s:gauge:%f", m.ID, value)
 			m.Hash = functions.CreateHash(msg, []byte(c.Key))
 		}
 		body, err := json.Marshal(m)
