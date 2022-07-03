@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/zamibaru89/devops-metrics/internal/config"
+	"github.com/zamibaru89/devops-metrics/internal/functions"
 	"log"
 	"math/rand"
 	"net/http"
@@ -44,6 +45,7 @@ type Metrics struct {
 	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
 	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
 	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
+	Hash  string   `json:"hash,omitempty"`  // значение хеш-функции
 }
 
 func (m *MetricGauge) SendMetrics(c config.AgentConfig) {
@@ -58,11 +60,16 @@ func (m *MetricGauge) SendMetrics(c config.AgentConfig) {
 	json.Unmarshal(j, &x)
 
 	for _, v := range listGauges {
+
 		value := x[v]
 		var m Metrics
 		m.ID = v
 		m.MType = "gauge"
 		m.Value = &value
+		if c.Key != "" {
+			msg := fmt.Sprintf("%s:gauge:%f", m.ID, m.Value)
+			m.Hash = functions.CreateHash(msg, []byte(c.Key))
+		}
 		body, err := json.Marshal(m)
 		if err != nil {
 			log.Println(err)
@@ -93,9 +100,14 @@ func (m *MetricCounter) SendMetrics(c config.AgentConfig) {
 	for _, v := range listCounters {
 		delta := xc[v]
 		var m Metrics
+
 		m.ID = v
 		m.MType = "counter"
 		m.Delta = &delta
+		if c.Key != "" {
+			msg := fmt.Sprintf("%s:counter:%d", m.ID, m.Delta)
+			m.Hash = functions.CreateHash(msg, []byte(c.Key))
+		}
 		body, _ := json.Marshal(m)
 
 		u.Path = path.Join("update")
