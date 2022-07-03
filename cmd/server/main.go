@@ -268,7 +268,7 @@ func main() {
 	}
 	r := chi.NewRouter()
 	r.Use(middleware.GzipHandle)
-	r.Use(middleware.CheckHash)
+	r.Use(middleware.CheckHash(ServerConfig))
 	r.Get("/", listMetrics)
 	r.Route("/update", func(r chi.Router) {
 		r.Post("/", receiveMetricJSON)

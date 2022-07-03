@@ -25,7 +25,7 @@ func (c *AgentConfig) Parse() error {
 	flag.StringVar(&c.Address, "a", "localhost:8080", "")
 	flag.DurationVar(&c.ReportInterval, "r", 10, "")
 	flag.DurationVar(&c.PollInterval, "p", 2, "")
-	flag.StringVar(&c.Key, "c", "", "")
+	flag.StringVar(&c.Key, "k", "", "")
 	flag.Parse()
 	err := env.Parse(c)
 	return err
@@ -36,7 +36,7 @@ func (c *ServerConfig) Parse() error {
 	flag.DurationVar(&c.StoreInterval, "i", 300, "")
 	flag.StringVar(&c.FilePath, "f", "/tmp/devops-metrics-db.json", "")
 	flag.BoolVar(&c.Restore, "r", true, "")
-	flag.StringVar(&c.Key, "c", "", "")
+	flag.StringVar(&c.Key, "k", "", "")
 	flag.Parse()
 
 	err := env.Parse(c)
