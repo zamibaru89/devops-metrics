@@ -32,10 +32,10 @@ func CheckHash(config config.ServerConfig) func(next http.Handler) http.Handler 
 					return
 				}
 				if metric.MType == "counter" {
-					counter := *metric.Delta
+					counter := metric.Delta
 					msg = fmt.Sprintf("%s:counter:%d", metric.ID, counter)
 				} else if metric.MType == "gauge" {
-					gauge := *metric.Value
+					gauge := metric.Value
 					msg = fmt.Sprintf("%s:gauge:%f", metric.ID, gauge)
 				}
 				hash := functions.CreateHash(msg, []byte(config.Key))
