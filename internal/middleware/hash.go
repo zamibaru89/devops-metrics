@@ -32,17 +32,20 @@ func CheckHash(config config.ServerConfig) func(next http.Handler) http.Handler 
 					return
 				}
 				if metric.MType == "counter" {
-					counter := metric.Delta
-					msg = fmt.Sprintf("%s:counter:%d", metric.ID, counter)
+
+					msg = fmt.Sprintf("%s:counter:%d", metric.ID, *metric.Delta)
+
 				} else if metric.MType == "gauge" {
-					gauge := metric.Value
-					msg = fmt.Sprintf("%s:gauge:%f", metric.ID, gauge)
+
+					msg = fmt.Sprintf("%s:gauge:%f", metric.ID, *metric.Value)
 				}
 				hash := functions.CreateHash(msg, []byte(config.Key))
 				if !hmac.Equal([]byte(hash), []byte(metric.Hash)) {
 					w.WriteHeader(http.StatusBadRequest)
+
 					return
 				}
+
 			}
 			next.ServeHTTP(w, r)
 

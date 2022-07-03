@@ -23,8 +23,8 @@ type ServerConfig struct {
 
 func (c *AgentConfig) Parse() error {
 	flag.StringVar(&c.Address, "a", "localhost:8080", "")
-	flag.DurationVar(&c.ReportInterval, "r", 10, "")
-	flag.DurationVar(&c.PollInterval, "p", 2, "")
+	flag.DurationVar(&c.ReportInterval, "r", 10*time.Second, "")
+	flag.DurationVar(&c.PollInterval, "p", 2*time.Second, "")
 	flag.StringVar(&c.Key, "k", "", "")
 	flag.Parse()
 	err := env.Parse(c)
@@ -33,7 +33,7 @@ func (c *AgentConfig) Parse() error {
 
 func (c *ServerConfig) Parse() error {
 	flag.StringVar(&c.Address, "a", ":8080", "")
-	flag.DurationVar(&c.StoreInterval, "i", 300, "")
+	flag.DurationVar(&c.StoreInterval, "i", 300*time.Second, "")
 	flag.StringVar(&c.FilePath, "f", "/tmp/devops-metrics-db.json", "")
 	flag.BoolVar(&c.Restore, "r", true, "")
 	flag.StringVar(&c.Key, "k", "", "")

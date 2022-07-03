@@ -107,11 +107,12 @@ func (m *MetricCounter) SendMetrics(c config.AgentConfig) {
 		m.Hash = ""
 		m.Delta = &delta
 		if c.Key != "" {
-			msg := fmt.Sprintf("%s:counter:%d", m.ID, m.Delta)
+			msg := fmt.Sprintf("%s:counter:%d", m.ID, delta)
+			fmt.Println("message", msg)
 			m.Hash = functions.CreateHash(msg, []byte(c.Key))
 		}
 		body, _ := json.Marshal(m)
-
+		fmt.Println("hash is ", m.Hash)
 		u.Path = path.Join("update")
 		u.Host = c.Address
 		sendPOST(*u, body)
@@ -159,7 +160,7 @@ func main() {
 			log.Println("running metric.UpdateMetrics()")
 
 		case <-pushTicker.C:
-			metricG.SendMetrics(AgentConfig)
+			//metricG.SendMetrics(AgentConfig)
 			metricC.SendMetrics(AgentConfig)
 		case <-sigs:
 			log.Println("signal received")
