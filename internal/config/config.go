@@ -3,6 +3,7 @@ package config
 import (
 	"flag"
 	"github.com/caarlos0/env/v6"
+	"log"
 	"time"
 )
 
@@ -32,15 +33,18 @@ func (c *AgentConfig) Parse() error {
 	return err
 }
 
-func (c *ServerConfig) Parse() error {
-	flag.StringVar(&c.Address, "a", ":8080", "")
-	flag.DurationVar(&c.StoreInterval, "i", 300*time.Second, "")
-	flag.StringVar(&c.FilePath, "f", "/tmp/devops-metrics-db.json", "")
-	flag.BoolVar(&c.Restore, "r", true, "")
-	flag.StringVar(&c.Key, "k", "", "")
-	flag.StringVar(&c.DSN, "d", "", "")
+func LoadServerConfig() (conf ServerConfig, err error) {
+	flag.StringVar(&conf.Address, "a", ":8080", "")
+	flag.DurationVar(&conf.StoreInterval, "i", 300*time.Second, "")
+	flag.StringVar(&conf.FilePath, "f", "/tmp/devops-metrics-db.json", "")
+	flag.BoolVar(&conf.Restore, "r", true, "")
+	flag.StringVar(&conf.Key, "k", "", "")
+	flag.StringVar(&conf.DSN, "d", "", "")
 	flag.Parse()
 
-	err := env.Parse(c)
-	return err
+	err = env.Parse(&conf)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return
 }
