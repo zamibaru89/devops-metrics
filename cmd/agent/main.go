@@ -70,7 +70,8 @@ func (m *MetricGauge) SendMetrics(c config.AgentConfig) {
 		})
 
 	}
-	body, _ := json.Marshal(metrics)
+
+	body, _ := json.Marshal(metrics.Metrics)
 
 	u.Path = path.Join("updates")
 	u.Host = c.Address
@@ -111,7 +112,8 @@ func (m *MetricCounter) SendMetrics(c config.AgentConfig) {
 		})
 
 	}
-	body, _ := json.Marshal(metrics)
+
+	body, _ := json.Marshal(metrics.Metrics)
 
 	u.Path = path.Join("updates")
 	u.Host = c.Address

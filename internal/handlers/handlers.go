@@ -221,12 +221,13 @@ func PingDB(config config.ServerConfig) func(w http.ResponseWriter, r *http.Requ
 
 func ReceiveMetricsJSON(config config.ServerConfig, st storage.Repo) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var m storage.MetricStorage
+		var m []storage.Metric
 		err := json.NewDecoder(r.Body).Decode(&m)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
 			render.JSON(w, r, m)
+			fmt.Println(err)
 
 			return
 		}

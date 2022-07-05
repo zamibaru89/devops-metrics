@@ -81,17 +81,17 @@ func (m *MemoryStorage) AsMetric() MetricStorage {
 	return metrics
 }
 
-func (m *MemoryStorage) AddMetrics(metrics MetricStorage) {
-	for i := range metrics.Metrics {
+func (m *MemoryStorage) AddMetrics(metrics []Metric) {
+	for i := range metrics {
 
-		switch metrics.Metrics[i].MType {
+		switch metrics[i].MType {
 		case "gauge":
 
-			m.AddGaugeMetric(metrics.Metrics[i].ID, *metrics.Metrics[i].Value)
+			m.AddGaugeMetric(metrics[i].ID, *metrics[i].Value)
 
 		case "counter":
 
-			m.AddCounterMetric(metrics.Metrics[i].ID, *metrics.Metrics[i].Delta)
+			m.AddCounterMetric(metrics[i].ID, *metrics[i].Delta)
 
 		}
 

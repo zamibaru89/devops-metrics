@@ -167,7 +167,7 @@ func (p *PostgresStorage) AsMetric() MetricStorage {
 	return metrics
 }
 
-func (p *PostgresStorage) AddMetrics(metrics MetricStorage) {
+func (p *PostgresStorage) AddMetrics(metrics []Metric) {
 	conn, err := pgx.Connect(context.Background(), p.DSN)
 	if err != nil {
 		log.Println(err)
@@ -175,7 +175,7 @@ func (p *PostgresStorage) AddMetrics(metrics MetricStorage) {
 	defer conn.Close(context.Background())
 	tran, _ := conn.Begin(context.Background())
 	defer tran.Rollback(context.Background())
-	for i := range metrics.Metrics {
+	for i := range metrics {
 
 		query := `
 		INSERT INTO metrics(
@@ -188,7 +188,7 @@ func (p *PostgresStorage) AddMetrics(metrics MetricStorage) {
 		ON CONFLICT (metric_id) DO UPDATE
 		SET metric_value=$3, metric_delta=metrics.metric_delta+$4;
 	`
-		_, err = conn.Exec(context.Background(), query, metrics.Metrics[i].ID, metrics.Metrics[i].MType, metrics.Metrics[i].Value, metrics.Metrics[i].Delta)
+		_, err = conn.Exec(context.Background(), query, metrics[i].ID, metrics[i].MType, metrics[i].Value, metrics[i].Delta)
 		if err != nil {
 			log.Println(err)
 		}
