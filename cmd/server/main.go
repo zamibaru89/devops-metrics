@@ -26,12 +26,12 @@ func main() {
 	} else {
 		Server = storage.NewMemoryStorage()
 	}
+	if ServerConfig.Restore {
+		functions.RestoreMetricsFromDisk(ServerConfig, Server)
+	}
 	if ServerConfig.StoreInterval != 0 && ServerConfig.DSN == "" {
 
 		storeTicker := time.NewTicker(ServerConfig.StoreInterval)
-		if ServerConfig.Restore {
-			functions.RestoreMetricsFromDisk(ServerConfig, Server)
-		}
 
 		go func() {
 			for {
