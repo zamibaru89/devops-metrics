@@ -21,12 +21,12 @@ func main() {
 
 	ServerConfig, _ := config.LoadServerConfig()
 	var Server storage.Repo
-	//if ServerConfig.DSN != "" {
-	//	Server = storage.NewPostgresStorage(ServerConfig)
-	//} else {
-	Server = storage.NewMemoryStorage()
-	//}
-	if ServerConfig.StoreInterval != 0 {
+	if ServerConfig.DSN != "" {
+		Server = storage.NewPostgresStorage(ServerConfig)
+	} else {
+		Server = storage.NewMemoryStorage()
+	}
+	if ServerConfig.StoreInterval != 0 && ServerConfig.DSN == "" {
 
 		storeTicker := time.NewTicker(ServerConfig.StoreInterval)
 		if ServerConfig.Restore {
