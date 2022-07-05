@@ -29,7 +29,7 @@ func ReceiveMetric(config config.ServerConfig, storage storage.Repo) func(w http
 				return
 			}
 			storage.AddGaugeMetric(metricName, Value)
-			if config.StoreInterval == 0 {
+			if config.StoreInterval == 0 && config.DSN == "" {
 				err := functions.SaveMetricToDisk(config, storage)
 				if err != nil {
 					return
@@ -45,7 +45,7 @@ func ReceiveMetric(config config.ServerConfig, storage storage.Repo) func(w http
 				return
 			}
 			storage.AddCounterMetric(metricName, Value)
-			if config.StoreInterval == 0 {
+			if config.StoreInterval == 0 && config.DSN == "" {
 				err := functions.SaveMetricToDisk(config, storage)
 				if err != nil {
 					return
@@ -124,7 +124,7 @@ func ReceiveMetricJSON(config config.ServerConfig, st storage.Repo) func(w http.
 				st.AddGaugeMetric(m.ID, *m.Value)
 				w.Header().Set("Content-Type", "application/json")
 				render.JSON(w, r, m)
-				if config.StoreInterval == 0 {
+				if config.StoreInterval == 0 && config.DSN == "" {
 					functions.SaveMetricToDisk(config, st)
 
 				}
@@ -141,7 +141,7 @@ func ReceiveMetricJSON(config config.ServerConfig, st storage.Repo) func(w http.
 				w.Header().Set("Content-Type", "application/json")
 				render.JSON(w, r, m)
 
-				if config.StoreInterval == 0 {
+				if config.StoreInterval == 0 && config.DSN == "" {
 					functions.SaveMetricToDisk(config, st)
 
 				}
@@ -231,7 +231,7 @@ func ReceiveMetricsJSON(config config.ServerConfig, st storage.Repo) func(w http
 			return
 		}
 		st.AddMetrics(m)
-		if config.StoreInterval == 0 {
+		if config.StoreInterval == 0 && config.DSN == "" {
 			functions.SaveMetricToDisk(config, st)
 
 		}
