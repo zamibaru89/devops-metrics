@@ -2,7 +2,6 @@ package storage
 
 import (
 	"context"
-	"fmt"
 	"github.com/jackc/pgx/v4"
 	"github.com/zamibaru89/devops-metrics/internal/config"
 	"log"
@@ -23,8 +22,7 @@ func NewPostgresStorage(c config.ServerConfig) Repo {
     metric_id VARCHAR(50) NOT NULL UNIQUE,
     metric_type VARCHAR(50),
     metric_delta BIGINT,
-    metric_value DOUBLE PRECISION,
-    metric_hash VARCHAR(100)
+    metric_value DOUBLE PRECISION
 );`
 	_, err = conn.Exec(context.Background(), query)
 	if err != nil {
@@ -118,6 +116,36 @@ func (p *PostgresStorage) GetCounter(metricName string) (int64, error) {
 }
 
 func (p *PostgresStorage) AsMetric() MetricStorage {
-	fmt.Println("PH")
-	return MetricStorage{}
+	var metrics MetricStorage
+	conn, err := pgx.Connect(context.Background(), p.DSN)
+	if err != nil {
+		log.Println(err)
+	}
+	defer conn.Close(context.Background())
+	query := "SELECT metric_id, metric_type, metric_delta, metric_value FROM metrics"
+
+	result, err := conn.Query(context.Background(), query)
+	if err != nil {
+		log.Println(err)
+	}
+	defer result.Close()
+
+	for result.Next() {
+		var metricID, metricType string
+		var metricDelta *int64
+		var metricValue *float64
+		err := result.Scan(&metricID, &metricType, &metricDelta, &metricValue)
+		if err != nil {
+			log.Println(err)
+		}
+
+		metrics.Metrics = append(metrics.Metrics, Metric{
+			ID:    metricID,
+			MType: metricType,
+			Delta: metricDelta,
+			Value: metricValue,
+		})
+	}
+
+	return metrics
 }
