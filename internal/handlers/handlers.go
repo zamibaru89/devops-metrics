@@ -231,6 +231,10 @@ func ReceiveMetricsJSON(config config.ServerConfig, st storage.Repo) func(w http
 			return
 		}
 		st.AddMetrics(m)
+		if config.StoreInterval == 0 {
+			functions.SaveMetricToDisk(config, st)
+
+		}
 
 	}
 }
