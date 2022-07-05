@@ -59,7 +59,7 @@ func (m *MetricGauge) SendMetrics(c config.AgentConfig) {
 		var Hash string
 		if c.Key != "" {
 			msg := fmt.Sprintf("%s:gauge:%f", v, value)
-			fmt.Println("message", msg)
+
 			Hash = functions.CreateHash(msg, []byte(c.Key))
 		}
 		metrics.Metrics = append(metrics.Metrics, storage.Metric{
@@ -100,7 +100,7 @@ func (m *MetricCounter) SendMetrics(c config.AgentConfig) {
 		var Hash string
 		if c.Key != "" {
 			msg := fmt.Sprintf("%s:counter:%d", v, delta)
-			fmt.Println("message", msg)
+
 			Hash = functions.CreateHash(msg, []byte(c.Key))
 		}
 		metrics.Metrics = append(metrics.Metrics, storage.Metric{
