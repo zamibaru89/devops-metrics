@@ -156,7 +156,7 @@ func (p *PostgresStorage) AddMetrics(metrics MetricStorage) {
 		log.Println(err)
 	}
 	defer conn.Close(context.Background())
-	tran, err := conn.Begin(context.Background())
+	tran, _ := conn.Begin(context.Background())
 	defer tran.Rollback(context.Background())
 	for i := range metrics.Metrics {
 
