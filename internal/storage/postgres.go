@@ -76,6 +76,7 @@ func (p *PostgresStorage) AddGaugeMetric(name string, value float64) {
 }
 
 func (p *PostgresStorage) GetGauge(metricName string) (float64, error) {
+
 	var gauge float64
 	conn, err := pgx.Connect(context.Background(), p.DSN)
 	if err != nil {
@@ -83,14 +84,20 @@ func (p *PostgresStorage) GetGauge(metricName string) (float64, error) {
 	}
 	defer conn.Close(context.Background())
 
-	query := "SELECT metric_value FROM metrics WHERE metric_id=$1"
+	query := "SELECT metric_value FROM metrics WHERE metric_id=$1;"
 
 	result, err := conn.Query(context.Background(), query, metricName)
+
 	if err != nil {
 		return 0, err
 	}
 	defer result.Close()
-	result.Scan(&gauge)
+	for result.Next() {
+		err = result.Scan(&gauge)
+		if err != nil {
+			return 0, err
+		}
+	}
 
 	return gauge, nil
 }
@@ -103,14 +110,20 @@ func (p *PostgresStorage) GetCounter(metricName string) (int64, error) {
 	}
 	defer conn.Close(context.Background())
 
-	query := "SELECT metric_delta FROM metrics WHERE metric_id=$1"
+	query := "SELECT metric_delta FROM metrics WHERE metric_id=$1;"
 
 	result, err := conn.Query(context.Background(), query, metricName)
+
 	if err != nil {
 		return 0, err
 	}
 	defer result.Close()
-	result.Scan(&counter)
+	for result.Next() {
+		err = result.Scan(&counter)
+		if err != nil {
+			return 0, err
+		}
+	}
 
 	return counter, nil
 }
