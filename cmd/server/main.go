@@ -26,7 +26,7 @@ func main() {
 	} else {
 		Server = storage.NewMemoryStorage()
 	}
-	if ServerConfig.Restore {
+	if ServerConfig.Restore && ServerConfig.DSN == "" {
 		functions.RestoreMetricsFromDisk(ServerConfig, Server)
 	}
 	if ServerConfig.StoreInterval != 0 {

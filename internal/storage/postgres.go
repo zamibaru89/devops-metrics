@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"fmt"
 	"github.com/jackc/pgx/v4"
 	"github.com/zamibaru89/devops-metrics/internal/config"
 	"log"
@@ -93,6 +94,7 @@ func (p *PostgresStorage) GetGauge(metricName string) (float64, error) {
 	}
 	defer result.Close()
 	for result.Next() {
+		fmt.Println("scan")
 		err = result.Scan(&gauge)
 		if err != nil {
 			return 0, err
