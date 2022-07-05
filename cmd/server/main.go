@@ -29,7 +29,7 @@ func main() {
 	if ServerConfig.Restore {
 		functions.RestoreMetricsFromDisk(ServerConfig, Server)
 	}
-	if ServerConfig.StoreInterval != 0 && ServerConfig.DSN == "" {
+	if ServerConfig.StoreInterval != 0 {
 
 		storeTicker := time.NewTicker(ServerConfig.StoreInterval)
 
