@@ -96,13 +96,13 @@ func (p *PostgresStorage) GetGauge(metricName string) (float64, error) {
 	for result.Next() {
 
 		err = result.Scan(&gauge)
-		if err != nil {
-			return 0, err
-		}
+	}
+	if err != nil {
+		return 0, errors.New("not Found")
+	} else {
 		return gauge, nil
 	}
 
-	return 0, errors.New("not Found")
 }
 
 func (p *PostgresStorage) GetCounter(metricName string) (int64, error) {
@@ -123,13 +123,13 @@ func (p *PostgresStorage) GetCounter(metricName string) (int64, error) {
 	defer result.Close()
 	for result.Next() {
 		err = result.Scan(&counter)
-		if err != nil {
-			return 0, err
-		}
+
+	}
+	if err != nil {
+		return 0, errors.New("not Found")
+	} else {
 		return counter, nil
 	}
-
-	return 0, errors.New("not Found")
 }
 
 func (p *PostgresStorage) AsMetric() MetricStorage {
