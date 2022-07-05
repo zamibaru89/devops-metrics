@@ -2,6 +2,9 @@ package main
 
 import (
 	"github.com/go-chi/chi/v5"
+	"github.com/zamibaru89/devops-metrics/internal/config"
+	"github.com/zamibaru89/devops-metrics/internal/handlers"
+	"github.com/zamibaru89/devops-metrics/internal/storage"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -9,7 +12,11 @@ import (
 	"testing"
 )
 
+var ServerConfig config.ServerConfig
+var Server storage.Repo
+
 func Test_receiveMetric(t *testing.T) {
+	Server = storage.NewMemoryStorage()
 	type want struct {
 		code int
 		path string
@@ -61,7 +68,7 @@ func Test_receiveMetric(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 
 			r := chi.NewRouter()
-			r.Post("/update/{metricType}/{metricName}/{metricValue}", receiveMetric)
+			r.Post("/update/{metricType}/{metricName}/{metricValue}", handlers.ReceiveMetric(ServerConfig, Server))
 			ts := httptest.NewServer(r)
 			defer ts.Close()
 			// проверяем код ответа
@@ -88,6 +95,7 @@ func Test_receiveMetric(t *testing.T) {
 }
 
 func Test_receiveMetricJSON(t *testing.T) {
+	Server = storage.NewMemoryStorage()
 	type want struct {
 		code int
 		path string
@@ -130,7 +138,7 @@ func Test_receiveMetricJSON(t *testing.T) {
 
 			r := chi.NewRouter()
 
-			r.Post("/update", receiveMetricJSON)
+			r.Post("/update", handlers.ReceiveMetricJSON(ServerConfig, Server))
 
 			ts := httptest.NewServer(r)
 			testLink := ts.URL + tt.want.path
@@ -161,6 +169,7 @@ func Test_receiveMetricJSON(t *testing.T) {
 }
 
 func Test_listMetrics(t *testing.T) {
+	Server = storage.NewMemoryStorage()
 	type want struct {
 		code int
 		path string
@@ -184,8 +193,8 @@ func Test_listMetrics(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 
 			r := chi.NewRouter()
-			r.Get("/", listMetrics)
-			r.Post("/update/{metricType}/{metricName}/{metricValue}", receiveMetric)
+			r.Get("/", handlers.ListMetrics(Server))
+			r.Post("/update/{metricType}/{metricName}/{metricValue}", handlers.ReceiveMetric(ServerConfig, Server))
 			ts := httptest.NewServer(r)
 			defer ts.Close()
 			// проверяем код ответа
