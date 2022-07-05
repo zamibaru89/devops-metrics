@@ -6,6 +6,7 @@ type Repo interface {
 	GetCounter(string) (int64, error)
 	GetGauge(string) (float64, error)
 	AsMetric() MetricStorage
+	AddMetrics(metrics MetricStorage)
 }
 
 type Metric struct {

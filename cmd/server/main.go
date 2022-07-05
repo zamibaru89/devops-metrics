@@ -55,6 +55,10 @@ func main() {
 		r.Post("/", handlers.ReceiveMetricJSON(ServerConfig, Server))
 		r.Post("/{metricType}/{metricName}/{metricValue}", handlers.ReceiveMetric(ServerConfig, Server))
 	})
+	r.With(middleware.CheckHash(ServerConfig)).Route("/updates", func(r chi.Router) {
+		r.Post("/", handlers.ReceiveMetricsJSON(ServerConfig, Server))
+
+	})
 	r.Route("/value", func(r chi.Router) {
 		r.Post("/", handlers.ValueOfMetricJSON(ServerConfig, Server))
 		r.Get("/{metricType}/{metricName}", handlers.ValueOfMetric(Server))

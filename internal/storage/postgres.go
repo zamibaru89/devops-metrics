@@ -149,3 +149,34 @@ func (p *PostgresStorage) AsMetric() MetricStorage {
 
 	return metrics
 }
+
+func (p *PostgresStorage) AddMetrics(metrics MetricStorage) {
+	conn, err := pgx.Connect(context.Background(), p.DSN)
+	if err != nil {
+		log.Println(err)
+	}
+	defer conn.Close(context.Background())
+	tran, err := conn.Begin(context.Background())
+	defer tran.Rollback(context.Background())
+	for i := range metrics.Metrics {
+
+		query := `
+		INSERT INTO metrics(
+		metric_id,
+		metric_type,
+		metric_value, 
+		metric_delta
+		)
+		VALUES($1, $2, $3, $4)
+		ON CONFLICT (metric_id) DO UPDATE
+		SET metric_value=$3, metric_delta=metrics.metric_delta+$4;
+	`
+		_, err = conn.Exec(context.Background(), query, metrics.Metrics[i].ID, metrics.Metrics[i].MType, metrics.Metrics[i].Value, metrics.Metrics[i].Delta)
+		if err != nil {
+			log.Println(err)
+		}
+
+	}
+	tran.Commit(context.Background())
+
+}
