@@ -2,7 +2,7 @@ package storage
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"github.com/jackc/pgx/v4"
 	"github.com/zamibaru89/devops-metrics/internal/config"
 	"log"
@@ -94,14 +94,15 @@ func (p *PostgresStorage) GetGauge(metricName string) (float64, error) {
 	}
 	defer result.Close()
 	for result.Next() {
-		fmt.Println("scan")
+
 		err = result.Scan(&gauge)
 		if err != nil {
 			return 0, err
 		}
+		return gauge, nil
 	}
 
-	return gauge, nil
+	return 0, errors.New("not Found")
 }
 
 func (p *PostgresStorage) GetCounter(metricName string) (int64, error) {
@@ -125,9 +126,10 @@ func (p *PostgresStorage) GetCounter(metricName string) (int64, error) {
 		if err != nil {
 			return 0, err
 		}
+		return counter, nil
 	}
 
-	return counter, nil
+	return 0, errors.New("not Found")
 }
 
 func (p *PostgresStorage) AsMetric() MetricStorage {
