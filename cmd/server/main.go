@@ -13,16 +13,25 @@ import (
 	"github.com/zamibaru89/devops-metrics/internal/handlers"
 	"github.com/zamibaru89/devops-metrics/internal/middleware"
 	"github.com/zamibaru89/devops-metrics/internal/storage"
+	"log"
 	"net/http"
 	"time"
 )
 
 func main() {
 
-	ServerConfig, _ := config.LoadServerConfig()
+	ServerConfig, err := config.LoadServerConfig()
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
 	var Server storage.Repo
 	if ServerConfig.DSN != "" {
-		Server = storage.NewPostgresStorage(ServerConfig)
+		Server, err = storage.NewPostgresStorage(ServerConfig)
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
 	} else {
 		Server = storage.NewMemoryStorage()
 	}

@@ -18,7 +18,7 @@ func NewMemoryStorage() Repo {
 		CounterMetric: make(map[string]int64),
 	}
 }
-func (m *MemoryStorage) AddCounterMetric(name string, value int64) {
+func (m *MemoryStorage) AddCounterMetric(name string, value int64) error {
 	m.CounterMutex.Lock()
 	if len(m.CounterMetric) == 0 {
 		m.CounterMetric = make(map[string]int64)
@@ -26,9 +26,10 @@ func (m *MemoryStorage) AddCounterMetric(name string, value int64) {
 
 	m.CounterMetric[name] += value
 	m.CounterMutex.Unlock()
+	return nil
 }
 
-func (m *MemoryStorage) AddGaugeMetric(name string, value float64) {
+func (m *MemoryStorage) AddGaugeMetric(name string, value float64) error {
 	m.GaugeMutex.Lock()
 	if len(m.GaugeMetric) == 0 {
 		m.GaugeMetric = make(map[string]float64)
@@ -36,6 +37,7 @@ func (m *MemoryStorage) AddGaugeMetric(name string, value float64) {
 
 	m.GaugeMetric[name] = value
 	m.GaugeMutex.Unlock()
+	return nil
 }
 
 func (m *MemoryStorage) GetGauge(metricName string) (float64, error) {
@@ -81,7 +83,7 @@ func (m *MemoryStorage) AsMetric() MetricStorage {
 	return metrics
 }
 
-func (m *MemoryStorage) AddMetrics(metrics []Metric) {
+func (m *MemoryStorage) AddMetrics(metrics []Metric) error {
 	for i := range metrics {
 
 		switch metrics[i].MType {
@@ -96,5 +98,5 @@ func (m *MemoryStorage) AddMetrics(metrics []Metric) {
 		}
 
 	}
-
+	return nil
 }

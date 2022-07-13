@@ -1,12 +1,12 @@
 package storage
 
 type Repo interface {
-	AddCounterMetric(string, int64)
-	AddGaugeMetric(string, float64)
+	AddCounterMetric(string, int64) error
+	AddGaugeMetric(string, float64) error
 	GetCounter(string) (int64, error)
 	GetGauge(string) (float64, error)
 	AsMetric() MetricStorage
-	AddMetrics(metrics []Metric)
+	AddMetrics(metrics []Metric) error
 }
 
 type Metric struct {

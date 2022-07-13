@@ -12,7 +12,7 @@ type PostgresStorage struct {
 	DSN string
 }
 
-func NewPostgresStorage(c config.ServerConfig) Repo {
+func NewPostgresStorage(c config.ServerConfig) (Repo, error) {
 	conn, err := pgx.Connect(context.Background(), c.DSN)
 	if err != nil {
 		log.Println(err)
@@ -28,11 +28,12 @@ func NewPostgresStorage(c config.ServerConfig) Repo {
 	_, err = conn.Exec(context.Background(), query)
 	if err != nil {
 		log.Println(err)
+		return &PostgresStorage{DSN: c.DSN}, err
 	}
 
-	return &PostgresStorage{DSN: c.DSN}
+	return &PostgresStorage{DSN: c.DSN}, nil
 }
-func (p *PostgresStorage) AddCounterMetric(name string, value int64) {
+func (p *PostgresStorage) AddCounterMetric(name string, value int64) error {
 	conn, err := pgx.Connect(context.Background(), p.DSN)
 	if err != nil {
 		log.Println(err)
@@ -51,10 +52,13 @@ func (p *PostgresStorage) AddCounterMetric(name string, value int64) {
 	_, err = conn.Exec(context.Background(), query, name, "counter", value)
 	if err != nil {
 		log.Println(err)
+		return err
+
 	}
+	return nil
 }
 
-func (p *PostgresStorage) AddGaugeMetric(name string, value float64) {
+func (p *PostgresStorage) AddGaugeMetric(name string, value float64) error {
 	conn, err := pgx.Connect(context.Background(), p.DSN)
 	if err != nil {
 		log.Println(err)
@@ -73,7 +77,10 @@ func (p *PostgresStorage) AddGaugeMetric(name string, value float64) {
 	_, err = conn.Exec(context.Background(), query, name, "gauge", value)
 	if err != nil {
 		log.Println(err)
+		return err
+
 	}
+	return nil
 }
 
 func (p *PostgresStorage) GetGauge(metricName string) (float64, error) {
@@ -167,13 +174,18 @@ func (p *PostgresStorage) AsMetric() MetricStorage {
 	return metrics
 }
 
-func (p *PostgresStorage) AddMetrics(metrics []Metric) {
+func (p *PostgresStorage) AddMetrics(metrics []Metric) error {
 	conn, err := pgx.Connect(context.Background(), p.DSN)
 	if err != nil {
 		log.Println(err)
+		return err
 	}
 	defer conn.Close(context.Background())
-	tran, _ := conn.Begin(context.Background())
+	tran, err := conn.Begin(context.Background())
+	if err != nil {
+		log.Println(err)
+		return err
+	}
 	defer tran.Rollback(context.Background())
 	for i := range metrics {
 
@@ -191,9 +203,15 @@ func (p *PostgresStorage) AddMetrics(metrics []Metric) {
 		_, err = conn.Exec(context.Background(), query, metrics[i].ID, metrics[i].MType, metrics[i].Value, metrics[i].Delta)
 		if err != nil {
 			log.Println(err)
+			return err
 		}
 
 	}
-	tran.Commit(context.Background())
 
+	err = tran.Commit(context.Background())
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
 }

@@ -71,8 +71,11 @@ func (m *MetricGauge) SendMetrics(c config.AgentConfig) {
 
 	}
 
-	body, _ := json.Marshal(metrics.Metrics)
-
+	body, err := json.Marshal(metrics.Metrics)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 	u.Path = path.Join("updates")
 	u.Host = c.Address
 
@@ -113,8 +116,11 @@ func (m *MetricCounter) SendMetrics(c config.AgentConfig) {
 
 	}
 
-	body, _ := json.Marshal(metrics.Metrics)
-
+	body, err := json.Marshal(metrics.Metrics)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 	u.Path = path.Join("updates")
 	u.Host = c.Address
 

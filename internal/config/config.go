@@ -3,7 +3,6 @@ package config
 import (
 	"flag"
 	"github.com/caarlos0/env/v6"
-	"log"
 	"time"
 )
 
@@ -44,7 +43,7 @@ func LoadServerConfig() (conf ServerConfig, err error) {
 
 	err = env.Parse(&conf)
 	if err != nil {
-		log.Fatal(err)
+		return conf, err
 	}
 	return
 }

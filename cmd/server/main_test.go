@@ -12,10 +12,9 @@ import (
 	"testing"
 )
 
-var ServerConfig config.ServerConfig
-var Server storage.Repo
-
 func Test_receiveMetric(t *testing.T) {
+	var ServerConfig config.ServerConfig
+	var Server storage.Repo
 	Server = storage.NewMemoryStorage()
 	type want struct {
 		code int
@@ -95,6 +94,8 @@ func Test_receiveMetric(t *testing.T) {
 }
 
 func Test_receiveMetricJSON(t *testing.T) {
+	var ServerConfig config.ServerConfig
+	var Server storage.Repo
 	Server = storage.NewMemoryStorage()
 	type want struct {
 		code int
@@ -169,6 +170,8 @@ func Test_receiveMetricJSON(t *testing.T) {
 }
 
 func Test_listMetrics(t *testing.T) {
+	var ServerConfig config.ServerConfig
+	var Server storage.Repo
 	Server = storage.NewMemoryStorage()
 	type want struct {
 		code int

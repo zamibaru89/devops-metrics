@@ -20,8 +20,8 @@ func ReceiveMetric(config config.ServerConfig, storage storage.Repo) func(w http
 		metricType := chi.URLParam(r, "metricType")
 		metricName := chi.URLParam(r, "metricName")
 		metricValue := chi.URLParam(r, "metricValue")
-
-		if metricType == "gauge" {
+		switch metricType {
+		case "gauge":
 			Value, err := strconv.ParseFloat(metricValue, 64)
 			if err != nil {
 				w.Header().Set("Content-Type", "text/html")
@@ -35,9 +35,7 @@ func ReceiveMetric(config config.ServerConfig, storage storage.Repo) func(w http
 					return
 				}
 			}
-
-		} else if metricType == "counter" {
-
+		case "counter":
 			Value, err := strconv.ParseInt(metricValue, 0, 64)
 			if err != nil {
 				w.Header().Set("Content-Type", "text/html")
@@ -52,8 +50,10 @@ func ReceiveMetric(config config.ServerConfig, storage storage.Repo) func(w http
 				}
 			}
 
-		} else {
+		default:
+
 			w.WriteHeader(501)
+
 		}
 
 	}
