@@ -14,7 +14,7 @@ import (
 
 func Test_receiveMetric(t *testing.T) {
 	var ServerConfig config.ServerConfig
-	var Server storage.Repo = storage.NewMemoryStorage()
+	var Server = storage.NewMemoryStorage()
 
 	type want struct {
 		code int
@@ -95,7 +95,7 @@ func Test_receiveMetric(t *testing.T) {
 
 func Test_receiveMetricJSON(t *testing.T) {
 	var ServerConfig config.ServerConfig
-	var Server storage.Repo = storage.NewMemoryStorage()
+	var Server = storage.NewMemoryStorage()
 	type want struct {
 		code int
 		path string
@@ -170,7 +170,7 @@ func Test_receiveMetricJSON(t *testing.T) {
 
 func Test_listMetrics(t *testing.T) {
 	var ServerConfig config.ServerConfig
-	var Server storage.Repo = storage.NewMemoryStorage()
+	var Server = storage.NewMemoryStorage()
 	type want struct {
 		code int
 		path string

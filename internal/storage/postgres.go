@@ -34,10 +34,12 @@ func NewPostgresStorage(c config.ServerConfig) (Repo, error) {
 	return &PostgresStorage{DSN: c.DSN}, nil
 }
 func (p *PostgresStorage) AddCounterMetric(name string, value int64) error {
+
 	conn, err := pgx.Connect(context.Background(), p.DSN)
 	if err != nil {
 		log.Println(err)
 	}
+
 	defer conn.Close(context.Background())
 	query := `
 		INSERT INTO metrics(
@@ -86,6 +88,7 @@ func (p *PostgresStorage) AddGaugeMetric(name string, value float64) error {
 func (p *PostgresStorage) GetGauge(metricName string) (float64, error) {
 
 	var gauge float64
+
 	conn, err := pgx.Connect(context.Background(), p.DSN)
 	if err != nil {
 		log.Println(err)
