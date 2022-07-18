@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/zamibaru89/devops-metrics/internal/config"
+	"github.com/zamibaru89/devops-metrics/internal/functions"
+	"github.com/zamibaru89/devops-metrics/internal/storage"
+
 	"log"
 	"math/rand"
 	"net/http"
@@ -39,13 +42,6 @@ func (m *MetricGauge) UpdateMetrics() {
 	m.RandomValue = rand.Float64()
 }
 
-type Metrics struct {
-	ID    string   `json:"id"`              // имя метрики
-	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
-	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
-	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
-}
-
 func (m *MetricGauge) SendMetrics(c config.AgentConfig) {
 
 	x := make(map[string]float64)
@@ -56,23 +52,34 @@ func (m *MetricGauge) SendMetrics(c config.AgentConfig) {
 	}
 
 	json.Unmarshal(j, &x)
+	var metrics storage.MetricStorage
 
 	for _, v := range listGauges {
 		value := x[v]
-		var m Metrics
-		m.ID = v
-		m.MType = "gauge"
-		m.Value = &value
-		body, err := json.Marshal(m)
-		if err != nil {
-			log.Println(err)
-			return
-		}
+		var Hash string
+		if c.Key != "" {
+			msg := fmt.Sprintf("%s:gauge:%f", v, value)
 
-		u.Path = path.Join("update")
-		u.Host = c.Address
-		sendPOST(*u, body)
+			Hash = functions.CreateHash(msg, []byte(c.Key))
+		}
+		metrics.Metrics = append(metrics.Metrics, storage.Metric{
+			ID:    v,
+			MType: "gauge",
+			Value: &value,
+			Hash:  Hash,
+		})
+
 	}
+
+	body, err := json.Marshal(metrics.Metrics)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	u.Path = path.Join("updates")
+	u.Host = c.Address
+
+	sendPOST(*u, body)
 
 }
 
@@ -90,19 +97,34 @@ func (m *MetricCounter) SendMetrics(c config.AgentConfig) {
 	}
 	json.Unmarshal(j, &xc)
 
+	var metrics storage.MetricStorage
+
 	for _, v := range listCounters {
 		delta := xc[v]
-		var m Metrics
-		m.ID = v
-		m.MType = "counter"
-		m.Delta = &delta
-		body, _ := json.Marshal(m)
+		var Hash string
+		if c.Key != "" {
+			msg := fmt.Sprintf("%s:counter:%d", v, delta)
 
-		u.Path = path.Join("update")
-		u.Host = c.Address
-		sendPOST(*u, body)
+			Hash = functions.CreateHash(msg, []byte(c.Key))
+		}
+		metrics.Metrics = append(metrics.Metrics, storage.Metric{
+			ID:    v,
+			MType: "counter",
+			Delta: &delta,
+			Hash:  Hash,
+		})
+
 	}
 
+	body, err := json.Marshal(metrics.Metrics)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	u.Path = path.Join("updates")
+	u.Host = c.Address
+
+	sendPOST(*u, body)
 }
 
 func sendPOST(u url.URL, b []byte) {
@@ -145,6 +167,7 @@ func main() {
 			log.Println("running metric.UpdateMetrics()")
 
 		case <-pushTicker.C:
+
 			metricG.SendMetrics(AgentConfig)
 			metricC.SendMetrics(AgentConfig)
 		case <-sigs:
