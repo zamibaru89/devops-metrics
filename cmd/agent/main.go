@@ -228,15 +228,15 @@ func main() {
 	for {
 		select {
 		case <-pullTicker.C:
-			//metricG.UpdateMetrics()
+			metricG.UpdateMetrics()
 			metricG.UpdateMetricsPSUtils()
 			metricC.UpdateMetrics()
 			log.Println("running metric.UpdateMetrics()")
 
 		case <-pushTicker.C:
 
-			//metricG.SendMetrics(AgentConfig)
-			//metricC.SendMetrics(AgentConfig)
+			metricG.SendMetrics(AgentConfig)
+			metricC.SendMetrics(AgentConfig)
 			metricG.SendMetricsPSUtils(AgentConfig)
 		case <-sigs:
 			log.Println("signal received")
