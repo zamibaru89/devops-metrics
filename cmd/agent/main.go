@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/zamibaru89/devops-metrics/internal/config"
 	"github.com/zamibaru89/devops-metrics/internal/functions"
 	"github.com/zamibaru89/devops-metrics/internal/storage"
-
 	"log"
 	"math/rand"
 	"net/http"
@@ -31,15 +32,46 @@ var u = &url.URL{
 type MetricCounter struct {
 	PollCount uint64
 }
+type CPU struct {
+	CPU     string
+	percent float64
+}
+
+type CPUs struct {
+	CPUS []CPU
+}
 
 type MetricGauge struct {
 	runtime.MemStats
+	CPUs
+	TotalMemory float64
+	FreeMemory  float64
 	RandomValue float64
 }
 
 func (m *MetricGauge) UpdateMetrics() {
 	runtime.ReadMemStats(&m.MemStats)
 	m.RandomValue = rand.Float64()
+
+}
+
+func (m *MetricGauge) UpdateMetricsPSUtils() error {
+	cpu, _ := cpu.Percent(0, true)
+
+	for index, value := range cpu {
+		m.CPUs.CPUS = append(m.CPUs.CPUS, CPU{
+			CPU:     fmt.Sprintf("CPUutilization%d", index+1),
+			percent: value,
+		})
+	}
+	memoryStat, err := mem.VirtualMemory()
+	if err != nil {
+		return err
+	}
+	m.TotalMemory = float64(memoryStat.Total)
+	m.FreeMemory = float64(memoryStat.Free)
+	return nil
+
 }
 
 func (m *MetricGauge) SendMetrics(c config.AgentConfig) {
@@ -81,6 +113,40 @@ func (m *MetricGauge) SendMetrics(c config.AgentConfig) {
 
 	sendPOST(*u, body)
 
+}
+
+func (m *MetricGauge) SendMetricsPSUtils(c config.AgentConfig) {
+	var metrics storage.MetricStorage
+	for _, value := range m.CPUs.CPUS {
+		var Hash string
+		if c.Key != "" {
+			msg := fmt.Sprintf("%s:gauge:%f", value.CPU, value.percent)
+
+			Hash = functions.CreateHash(msg, []byte(c.Key))
+		}
+		metrics.Metrics = append(metrics.Metrics, storage.Metric{
+			ID:    "FreeMemory",
+			MType: "gauge",
+			Value: &m.FreeMemory,
+			Hash:  Hash,
+		})
+		metrics.Metrics = append(metrics.Metrics, storage.Metric{
+			ID:    "TotalMemory",
+			MType: "gauge",
+			Value: &m.TotalMemory,
+			Hash:  Hash,
+		})
+	}
+
+	body, err := json.Marshal(metrics.Metrics)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	u.Path = path.Join("updates")
+	u.Host = c.Address
+
+	sendPOST(*u, body)
 }
 
 func (m *MetricCounter) UpdateMetrics() {
@@ -162,14 +228,16 @@ func main() {
 	for {
 		select {
 		case <-pullTicker.C:
-			metricG.UpdateMetrics()
+			//metricG.UpdateMetrics()
+			metricG.UpdateMetricsPSUtils()
 			metricC.UpdateMetrics()
 			log.Println("running metric.UpdateMetrics()")
 
 		case <-pushTicker.C:
 
-			metricG.SendMetrics(AgentConfig)
-			metricC.SendMetrics(AgentConfig)
+			//metricG.SendMetrics(AgentConfig)
+			//metricC.SendMetrics(AgentConfig)
+			metricG.SendMetricsPSUtils(AgentConfig)
 		case <-sigs:
 			log.Println("signal received")
 			pullTicker.Stop()
