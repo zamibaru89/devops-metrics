@@ -64,6 +64,7 @@ func (m *MetricGauge) UpdateMetricsPSUtils() error {
 			percent: value,
 		})
 	}
+
 	memoryStat, err := mem.VirtualMemory()
 	if err != nil {
 		return err
@@ -117,26 +118,34 @@ func (m *MetricGauge) SendMetrics(c config.AgentConfig) {
 
 func (m *MetricGauge) SendMetricsPSUtils(c config.AgentConfig) {
 	var metrics storage.MetricStorage
+	var Hash string
 	for _, value := range m.CPUs.CPUS {
-		var Hash string
+
 		if c.Key != "" {
 			msg := fmt.Sprintf("%s:gauge:%f", value.CPU, value.percent)
 
 			Hash = functions.CreateHash(msg, []byte(c.Key))
 		}
+
 		metrics.Metrics = append(metrics.Metrics, storage.Metric{
-			ID:    "FreeMemory",
+			ID:    value.CPU,
 			MType: "gauge",
-			Value: &m.FreeMemory,
-			Hash:  Hash,
-		})
-		metrics.Metrics = append(metrics.Metrics, storage.Metric{
-			ID:    "TotalMemory",
-			MType: "gauge",
-			Value: &m.TotalMemory,
+			Value: &value.percent,
 			Hash:  Hash,
 		})
 	}
+	metrics.Metrics = append(metrics.Metrics, storage.Metric{
+		ID:    "FreeMemory",
+		MType: "gauge",
+		Value: &m.FreeMemory,
+		Hash:  Hash,
+	})
+	metrics.Metrics = append(metrics.Metrics, storage.Metric{
+		ID:    "TotalMemory",
+		MType: "gauge",
+		Value: &m.TotalMemory,
+		Hash:  Hash,
+	})
 
 	body, err := json.Marshal(metrics.Metrics)
 	if err != nil {
