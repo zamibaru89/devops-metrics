@@ -9,15 +9,15 @@ import (
 )
 
 type PostgresStorage struct {
-	DSN string
+	Connection *pgx.Conn
 }
 
-func NewPostgresStorage(c config.ServerConfig) (Repo, error) {
+func NewPostgresStorage(c config.ServerConfig) (Repo, *pgx.Conn, error) {
 	conn, err := pgx.Connect(context.Background(), c.DSN)
 	if err != nil {
 		log.Println(err)
 	}
-	defer conn.Close(context.Background())
+
 	query := `CREATE TABLE IF NOT EXISTS  metrics(
     id serial PRIMARY KEY,
     metric_id VARCHAR(50) NOT NULL UNIQUE,
@@ -28,19 +28,13 @@ func NewPostgresStorage(c config.ServerConfig) (Repo, error) {
 	_, err = conn.Exec(context.Background(), query)
 	if err != nil {
 		log.Println(err)
-		return &PostgresStorage{DSN: c.DSN}, err
+		return &PostgresStorage{Connection: conn}, conn, err
 	}
 
-	return &PostgresStorage{DSN: c.DSN}, nil
+	return &PostgresStorage{Connection: conn}, conn, nil
 }
 func (p *PostgresStorage) AddCounterMetric(name string, value int64) error {
 
-	conn, err := pgx.Connect(context.Background(), p.DSN)
-	if err != nil {
-		log.Println(err)
-	}
-
-	defer conn.Close(context.Background())
 	query := `
 		INSERT INTO metrics(
 		metric_id,
@@ -51,7 +45,7 @@ func (p *PostgresStorage) AddCounterMetric(name string, value int64) error {
 		ON CONFLICT (metric_id) DO UPDATE
 		SET metric_delta=metrics.metric_delta+$3;
 	`
-	_, err = conn.Exec(context.Background(), query, name, "counter", value)
+	_, err := p.Connection.Exec(context.Background(), query, name, "counter", value)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -61,11 +55,7 @@ func (p *PostgresStorage) AddCounterMetric(name string, value int64) error {
 }
 
 func (p *PostgresStorage) AddGaugeMetric(name string, value float64) error {
-	conn, err := pgx.Connect(context.Background(), p.DSN)
-	if err != nil {
-		log.Println(err)
-	}
-	defer conn.Close(context.Background())
+
 	query := `
 		INSERT INTO metrics(
 		metric_id,
@@ -76,7 +66,7 @@ func (p *PostgresStorage) AddGaugeMetric(name string, value float64) error {
 		ON CONFLICT (metric_id) DO UPDATE
 		SET metric_value=$3;
 	`
-	_, err = conn.Exec(context.Background(), query, name, "gauge", value)
+	_, err := p.Connection.Exec(context.Background(), query, name, "gauge", value)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -89,15 +79,9 @@ func (p *PostgresStorage) GetGauge(metricName string) (float64, error) {
 
 	var gauge float64
 
-	conn, err := pgx.Connect(context.Background(), p.DSN)
-	if err != nil {
-		log.Println(err)
-	}
-	defer conn.Close(context.Background())
-
 	query := "SELECT metric_value FROM metrics WHERE metric_id=$1;"
 
-	result, err := conn.Query(context.Background(), query, metricName)
+	result, err := p.Connection.Query(context.Background(), query, metricName)
 
 	if err != nil {
 		return 0, err
@@ -117,15 +101,10 @@ func (p *PostgresStorage) GetGauge(metricName string) (float64, error) {
 
 func (p *PostgresStorage) GetCounter(metricName string) (int64, error) {
 	var counter int64
-	conn, err := pgx.Connect(context.Background(), p.DSN)
-	if err != nil {
-		log.Println(err)
-	}
-	defer conn.Close(context.Background())
 
 	query := "SELECT metric_delta FROM metrics WHERE metric_id=$1;"
 
-	result, err := conn.Query(context.Background(), query, metricName)
+	result, err := p.Connection.Query(context.Background(), query, metricName)
 
 	if err != nil {
 		return 0, err
@@ -144,14 +123,10 @@ func (p *PostgresStorage) GetCounter(metricName string) (int64, error) {
 
 func (p *PostgresStorage) AsMetric() MetricStorage {
 	var metrics MetricStorage
-	conn, err := pgx.Connect(context.Background(), p.DSN)
-	if err != nil {
-		log.Println(err)
-	}
-	defer conn.Close(context.Background())
+
 	query := "SELECT metric_id, metric_type, metric_delta, metric_value FROM metrics"
 
-	result, err := conn.Query(context.Background(), query)
+	result, err := p.Connection.Query(context.Background(), query)
 	if err != nil {
 		log.Println(err)
 	}
@@ -178,13 +153,8 @@ func (p *PostgresStorage) AsMetric() MetricStorage {
 }
 
 func (p *PostgresStorage) AddMetrics(metrics []Metric) error {
-	conn, err := pgx.Connect(context.Background(), p.DSN)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-	defer conn.Close(context.Background())
-	tran, err := conn.Begin(context.Background())
+
+	tran, err := p.Connection.Begin(context.Background())
 	if err != nil {
 		log.Println(err)
 		return err
@@ -203,7 +173,7 @@ func (p *PostgresStorage) AddMetrics(metrics []Metric) error {
 		ON CONFLICT (metric_id) DO UPDATE
 		SET metric_value=$3, metric_delta=metrics.metric_delta+$4;
 	`
-		_, err = conn.Exec(context.Background(), query, metrics[i].ID, metrics[i].MType, metrics[i].Value, metrics[i].Delta)
+		_, err = p.Connection.Exec(context.Background(), query, metrics[i].ID, metrics[i].MType, metrics[i].Value, metrics[i].Delta)
 		if err != nil {
 			log.Println(err)
 			return err

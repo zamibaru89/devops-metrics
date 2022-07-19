@@ -6,6 +6,7 @@ package main
 
 import (
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v4"
 	"github.com/zamibaru89/devops-metrics/internal/config"
 	"github.com/zamibaru89/devops-metrics/internal/functions"
 	"github.com/zamibaru89/devops-metrics/internal/handlers"
@@ -24,14 +25,18 @@ func main() {
 		return
 	}
 	var Server storage.Repo
+	var Conn *pgx.Conn
 	if ServerConfig.DSN != "" {
-		Server, err = storage.NewPostgresStorage(ServerConfig)
+		Server, Conn, err = storage.NewPostgresStorage(ServerConfig)
+
 		if err != nil {
 			log.Fatal(err)
 			return
+
 		}
 	} else {
 		Server = storage.NewMemoryStorage()
+
 	}
 	if ServerConfig.Restore && ServerConfig.DSN == "" {
 		functions.RestoreMetricsFromDisk(ServerConfig, Server)
@@ -56,7 +61,7 @@ func main() {
 	r.Use(middleware.GzipHandle)
 	//r.Use(middleware.CheckHash(ServerConfig))
 	r.Get("/", handlers.ListMetrics(Server))
-	r.Get("/ping", handlers.PingDB(ServerConfig))
+	r.Get("/ping", handlers.PingDB(ServerConfig, Conn))
 
 	r.With(middleware.CheckHash(ServerConfig)).Route("/update", func(r chi.Router) {
 		r.Post("/", handlers.ReceiveMetricJSON(ServerConfig, Server))
