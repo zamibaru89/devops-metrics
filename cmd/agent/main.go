@@ -57,12 +57,13 @@ func (m *MetricGauge) UpdateMetrics() {
 
 func (m *MetricGauge) UpdateMetricsPSUtils() error {
 	cpu, _ := cpu.Percent(0, true)
-
+	m.CPUs.CPU = nil
 	for index, value := range cpu {
 		m.CPUs.CPU = append(m.CPUs.CPU, Cores{
 			Core:    fmt.Sprintf("CPUutilization%d", index+1),
 			percent: value,
 		})
+
 	}
 
 	memoryStat, err := mem.VirtualMemory()
@@ -119,8 +120,9 @@ func (m *MetricGauge) SendMetrics(c config.AgentConfig) {
 func (m *MetricGauge) SendMetricsPSUtils(c config.AgentConfig) {
 	var metrics storage.MetricStorage
 	var Hash string
+
 	for _, value := range m.CPUs.CPU {
-		log.Println(value.Core, value.percent)
+
 		if c.Key != "" {
 			msg := fmt.Sprintf("%s:gauge:%f", value.Core, value.percent)
 
