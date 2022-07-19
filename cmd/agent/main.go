@@ -32,13 +32,13 @@ var u = &url.URL{
 type MetricCounter struct {
 	PollCount uint64
 }
-type CPU struct {
-	CPU     string
+type Cores struct {
+	Core    string
 	percent float64
 }
 
 type CPUs struct {
-	CPUS []CPU
+	CPU []Cores
 }
 
 type MetricGauge struct {
@@ -59,8 +59,8 @@ func (m *MetricGauge) UpdateMetricsPSUtils() error {
 	cpu, _ := cpu.Percent(0, true)
 
 	for index, value := range cpu {
-		m.CPUs.CPUS = append(m.CPUs.CPUS, CPU{
-			CPU:     fmt.Sprintf("CPUutilization%d", index+1),
+		m.CPUs.CPU = append(m.CPUs.CPU, Cores{
+			Core:    fmt.Sprintf("CPUutilization%d", index+1),
 			percent: value,
 		})
 	}
@@ -119,16 +119,16 @@ func (m *MetricGauge) SendMetrics(c config.AgentConfig) {
 func (m *MetricGauge) SendMetricsPSUtils(c config.AgentConfig) {
 	var metrics storage.MetricStorage
 	var Hash string
-	for _, value := range m.CPUs.CPUS {
+	for _, value := range m.CPUs.CPU {
 
 		if c.Key != "" {
-			msg := fmt.Sprintf("%s:gauge:%f", value.CPU, value.percent)
+			msg := fmt.Sprintf("%s:gauge:%f", value.Core, value.percent)
 
 			Hash = functions.CreateHash(msg, []byte(c.Key))
 		}
 
 		metrics.Metrics = append(metrics.Metrics, storage.Metric{
-			ID:    value.CPU,
+			ID:    value.Core,
 			MType: "gauge",
 			Value: &value.percent,
 			Hash:  Hash,

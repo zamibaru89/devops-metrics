@@ -24,11 +24,13 @@ func main() {
 		return
 	}
 	var Server storage.Repo
+
 	if ServerConfig.DSN != "" {
 		Server, err = storage.NewPostgresStorage(ServerConfig)
 		if err != nil {
 			log.Fatal(err)
 			return
+
 		}
 	} else {
 		Server = storage.NewMemoryStorage()
