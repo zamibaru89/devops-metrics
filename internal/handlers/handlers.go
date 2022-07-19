@@ -203,19 +203,19 @@ func ValueOfMetricJSON(config config.ServerConfig, st storage.Repo) func(w http.
 	}
 }
 
-func PingDB(config config.ServerConfig) func(w http.ResponseWriter, r *http.Request) {
+func PingDB(config config.ServerConfig, conn *pgx.Conn) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		if config.DSN == "" {
 			w.WriteHeader(http.StatusNotAcceptable)
 		}
 
-		conn, err := pgx.Connect(context.Background(), config.DSN)
+		err := conn.Ping(context.Background())
 		if err != nil {
 			log.Printf("Unable to connect to DB: %v\n\n", err)
 			w.WriteHeader(http.StatusInternalServerError)
 		}
-		defer conn.Close(context.Background())
+
 	}
 }
 

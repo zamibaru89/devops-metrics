@@ -120,7 +120,7 @@ func (m *MetricGauge) SendMetricsPSUtils(c config.AgentConfig) {
 	var metrics storage.MetricStorage
 	var Hash string
 	for _, value := range m.CPUs.CPU {
-
+		log.Println(value.Core, value.percent)
 		if c.Key != "" {
 			msg := fmt.Sprintf("%s:gauge:%f", value.Core, value.percent)
 
@@ -148,6 +148,7 @@ func (m *MetricGauge) SendMetricsPSUtils(c config.AgentConfig) {
 	})
 
 	body, err := json.Marshal(metrics.Metrics)
+
 	if err != nil {
 		log.Println(err)
 		return
@@ -237,10 +238,16 @@ func main() {
 	for {
 		select {
 		case <-pullTicker.C:
-			metricG.UpdateMetrics()
-			metricG.UpdateMetricsPSUtils()
-			metricC.UpdateMetrics()
-			log.Println("running metric.UpdateMetrics()")
+			go func() {
+				metricG.UpdateMetrics()
+				metricC.UpdateMetrics()
+
+				log.Println("running metric.UpdateMetrics()")
+			}()
+			go func() {
+				metricG.UpdateMetricsPSUtils()
+				log.Println("running metric.UpdateMetricsPSUtils()")
+			}()
 
 		case <-pushTicker.C:
 
@@ -257,5 +264,4 @@ func main() {
 		}
 
 	}
-
 }

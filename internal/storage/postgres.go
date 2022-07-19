@@ -12,7 +12,7 @@ type PostgresStorage struct {
 	Connection *pgx.Conn
 }
 
-func NewPostgresStorage(c config.ServerConfig) (Repo, error) {
+func NewPostgresStorage(c config.ServerConfig) (Repo, *pgx.Conn, error) {
 	conn, err := pgx.Connect(context.Background(), c.DSN)
 	if err != nil {
 		log.Println(err)
@@ -28,10 +28,10 @@ func NewPostgresStorage(c config.ServerConfig) (Repo, error) {
 	_, err = conn.Exec(context.Background(), query)
 	if err != nil {
 		log.Println(err)
-		return &PostgresStorage{Connection: conn}, err
+		return &PostgresStorage{Connection: conn}, conn, err
 	}
 
-	return &PostgresStorage{Connection: conn}, nil
+	return &PostgresStorage{Connection: conn}, conn, nil
 }
 func (p *PostgresStorage) AddCounterMetric(name string, value int64) error {
 
